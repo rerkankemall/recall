@@ -35,6 +35,16 @@ export default function Home() {
   const [revealed, setRevealed] = useState(false);
 
   const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  function toggleSelect(ideaId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(ideaId)) next.delete(ideaId);
+      else next.add(ideaId);
+      return next;
+    });
+  }
 
   // ---- auth gate ----
   useEffect(() => {
@@ -117,9 +127,10 @@ export default function Home() {
 
   // ---- export ----
   function exportLibrary() {
+    const onlySelected = selected.size > 0;
     const lines: string[] = [`# Recall export`, `Exported ${new Date().toLocaleString()}`, ''];
     entries.forEach((entry) => {
-      const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
+      const entryIdeas = ideas.filter((i) => i.entry_id === entry.id && (!onlySelected || selected.has(i.id)));
       if (entryIdeas.length === 0) return;
       lines.push(`## ${entry.title} (${entry.type})`, '');
       entryIdeas.forEach((idea) => lines.push(`- ${idea.text}`));
@@ -311,8 +322,13 @@ export default function Home() {
                 onChange={(e) => setSearch(e.target.value)}
               />
               <button className="btn-ghost" onClick={exportLibrary}>
-                Export
+                {selected.size > 0 ? `Export selected (${selected.size})` : 'Export all'}
               </button>
+              {selected.size > 0 && (
+                <button className="btn-ghost" onClick={() => setSelected(new Set())}>
+                  Clear
+                </button>
+              )}
             </div>
           )}
           {entries.length === 0 ? (
@@ -353,8 +369,16 @@ export default function Home() {
                   {entryIdeas.map((idea) => {
                     const overdue = new Date(idea.due_date) <= new Date();
                     return (
-                      <div className="card" key={idea.id}>
-                        <div className="card-text">{idea.text}</div>
+                      <div className={`card ${selected.has(idea.id) ? 'card-selected' : ''}`} key={idea.id}>
+                        <div className="card-row">
+                          <input
+                            type="checkbox"
+                            className="card-check"
+                            checked={selected.has(idea.id)}
+                            onChange={() => toggleSelect(idea.id)}
+                          />
+                          <div className="card-text">{idea.text}</div>
+                        </div>
                         <div className="card-foot">
                           <div className="decay-bar">
                             <div className={`decay-fill ${overdue ? 'overdue' : ''}`} style={{ width: overdue ? '100%' : '40%' }} />
