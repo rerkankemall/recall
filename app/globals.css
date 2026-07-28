@@ -122,6 +122,8 @@ body { margin:0; }
   .idea-draft .remove:hover{ color:var(--rust); }
 
   /* library / cards */
+  .library-toolbar{ display:flex; gap:10px; margin-bottom:20px; }
+  .library-toolbar .search-input{ flex:1; }
   .entry-group{ margin-bottom:26px; }
   .entry-head{
     display:flex; align-items:baseline; justify-content:space-between; gap:12px;

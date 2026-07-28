@@ -34,6 +34,8 @@ export default function Home() {
   const [reviewIdx, setReviewIdx] = useState(0);
   const [revealed, setRevealed] = useState(false);
 
+  const [search, setSearch] = useState('');
+
   // ---- auth gate ----
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -111,6 +113,25 @@ export default function Home() {
     setStatus({ kind: 'idle' });
     await loadData();
     setTab('library');
+  }
+
+  // ---- export ----
+  function exportLibrary() {
+    const lines: string[] = [`# Recall export`, `Exported ${new Date().toLocaleString()}`, ''];
+    entries.forEach((entry) => {
+      const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
+      if (entryIdeas.length === 0) return;
+      lines.push(`## ${entry.title} (${entry.type})`, '');
+      entryIdeas.forEach((idea) => lines.push(`- ${idea.text}`));
+      lines.push('');
+    });
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `recall-export-${new Date().toISOString().slice(0, 10)}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   // ---- review ----
@@ -280,14 +301,46 @@ export default function Home() {
 
       {tab === 'library' && (
         <section className="view active">
+          {entries.length > 0 && (
+            <div className="library-toolbar">
+              <input
+                type="text"
+                className="search-input"
+                placeholder="Search your saved ideas…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <button className="btn-ghost" onClick={exportLibrary}>
+                Export
+              </button>
+            </div>
+          )}
           {entries.length === 0 ? (
             <div className="empty">
               <div className="empty-mark">Your library is empty</div>
               <div className="empty-sub">Capture something you read and it'll show up here.</div>
             </div>
           ) : (
-            entries.map((entry) => {
-              const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
+            (() => {
+              const query = search.trim().toLowerCase();
+              const visibleEntries = entries.filter(
+                (entry) =>
+                  !query ||
+                  entry.title.toLowerCase().includes(query) ||
+                  ideas.some((i) => i.entry_id === entry.id && i.text.toLowerCase().includes(query))
+              );
+              if (visibleEntries.length === 0) {
+                return (
+                  <div className="empty">
+                    <div className="empty-mark">No matches</div>
+                    <div className="empty-sub">Try a different search term.</div>
+                  </div>
+                );
+              }
+              return visibleEntries.map((entry) => {
+              const entryIdeas = ideas.filter(
+                (i) => i.entry_id === entry.id && (!query || i.text.toLowerCase().includes(query) || entry.title.toLowerCase().includes(query))
+              );
               if (entryIdeas.length === 0) return null;
               return (
                 <div className="entry-group" key={entry.id}>
@@ -315,7 +368,8 @@ export default function Home() {
                   })}
                 </div>
               );
-            })
+              });
+            })()
           )}
         </section>
       )}
