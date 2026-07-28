@@ -47,6 +47,13 @@ body { margin:0; }
   .brand-tag{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint); letter-spacing:.04em; }
   .clock{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-dim); text-align:right; }
 
+  .trial-banner{
+    display:flex; align-items:center; justify-content:space-between; gap:14px;
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
+    padding:12px 16px; margin-top:16px; font-size:13px; color:var(--ink-dim);
+  }
+  .trial-banner-locked{ border-color:var(--rust); color:var(--ink); }
+
   nav.tabs{
     display:flex; gap:2px; margin:20px 0 28px;
     border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
+import { getOrCreateSubscription, isEntitled } from '@/lib/entitlement';
 
 // GET /api/ideas -> { entries, ideas } for the signed-in user (RLS scopes this)
 export async function GET() {
@@ -29,6 +30,11 @@ export async function POST(req: NextRequest) {
   const supabase = createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
+
+  const sub = await getOrCreateSubscription(user.id);
+  if (!isEntitled(sub)) {
+    return NextResponse.json({ error: 'Your trial has ended. Subscribe to keep saving new ideas.' }, { status: 403 });
+  }
 
   const { title, type, ideas } = await req.json();
   if (!Array.isArray(ideas) || ideas.length === 0) {

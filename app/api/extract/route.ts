@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabase } from '@/lib/supabaseServer';
+import { createServerSupabase, createAdminSupabase } from '@/lib/supabaseServer';
+import { getOrCreateSubscription, isEntitled, TRIAL_WORD_LIMIT } from '@/lib/entitlement';
 
 // This route is the ONLY place ANTHROPIC_API_KEY is ever read. It runs on
 // the server, so the key never reaches the browser. The client (app/page.tsx)
@@ -11,9 +12,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   }
 
+  const sub = await getOrCreateSubscription(user.id);
+  if (!isEntitled(sub)) {
+    return NextResponse.json({ error: 'Your trial has ended. Subscribe to keep capturing new ideas.' }, { status: 403 });
+  }
+
   const { title, type, content } = await req.json();
   if (!content || !content.trim()) {
     return NextResponse.json({ error: 'No content provided' }, { status: 400 });
+  }
+
+  const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
+
+  if (sub.status === 'trialing') {
+    const remaining = TRIAL_WORD_LIMIT - sub.trial_words_used;
+    if (wordCount > remaining) {
+      return NextResponse.json(
+        {
+          error: `This would use ${wordCount} words, but you only have ${Math.max(0, remaining)} words left in your trial's ${TRIAL_WORD_LIMIT}-word limit. Subscribe for unlimited extraction.`,
+        },
+        { status: 403 }
+      );
+    }
   }
 
   try {
@@ -59,6 +79,13 @@ export async function POST(req: NextRequest) {
 
     if (!Array.isArray(ideas) || ideas.length === 0) {
       return NextResponse.json({ error: 'No ideas extracted' }, { status: 502 });
+    }
+
+    if (sub.status === 'trialing') {
+      await createAdminSupabase()
+        .from('subscriptions')
+        .update({ trial_words_used: sub.trial_words_used + wordCount })
+        .eq('user_id', user.id);
     }
 
     return NextResponse.json({ ideas: ideas.map(String) });

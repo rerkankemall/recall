@@ -37,6 +37,14 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  const [subscription, setSubscription] = useState<{
+    status: string;
+    trial_ends_at: string | null;
+    entitled: boolean;
+    trial_words_used: number;
+    trial_word_limit: number;
+  } | null>(null);
+
   function toggleSelect(ideaId: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -67,6 +75,27 @@ export default function Home() {
     if (!checkingAuth) loadData();
   }, [checkingAuth, loadData]);
 
+  const loadSubscription = useCallback(async () => {
+    const res = await fetch('/api/subscription');
+    if (!res.ok) return;
+    setSubscription(await res.json());
+  }, []);
+
+  useEffect(() => {
+    if (!checkingAuth) loadSubscription();
+  }, [checkingAuth, loadSubscription]);
+
+  async function upgrade() {
+    const res = await fetch('/api/stripe/checkout', { method: 'POST' });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else alert('Could not start checkout: ' + (data.error || 'unknown error'));
+  }
+
+  const trialDaysLeft = subscription?.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(subscription.trial_ends_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : null;
+
   const dueIdeas = () => ideas.filter((i) => new Date(i.due_date) <= new Date());
 
   useEffect(() => {
@@ -95,6 +124,7 @@ export default function Home() {
       if (!res.ok) throw new Error(data.error || 'Extraction failed');
       setDrafts(data.ideas);
       setStatus({ kind: 'idle' });
+      await loadSubscription();
     } catch (e: any) {
       setStatus({ kind: 'error', msg: e.message });
       setDrafts(['']);
@@ -202,6 +232,24 @@ export default function Home() {
         </div>
       </div>
 
+      {subscription && !subscription.entitled && (
+        <div className="trial-banner trial-banner-locked">
+          Your trial has ended. You can still view and export your library, but Capture and Review need a subscription.
+          <button className="btn" onClick={upgrade}>
+            Subscribe
+          </button>
+        </div>
+      )}
+      {subscription?.status === 'trialing' && subscription.entitled && trialDaysLeft !== null && (
+        <div className="trial-banner">
+          {(trialDaysLeft === 0 ? 'Your trial ends today.' : `${trialDaysLeft} day${trialDaysLeft === 1 ? '' : 's'} left in your trial.`) +
+            ` ${subscription.trial_words_used.toLocaleString()} / ${subscription.trial_word_limit.toLocaleString()} words used.`}
+          <button className="btn-ghost" onClick={upgrade}>
+            Subscribe now
+          </button>
+        </div>
+      )}
+
       <nav className="tabs">
         <button className={tab === 'capture' ? 'active' : ''} onClick={() => setTab('capture')}>
           CAPTURE
@@ -215,7 +263,19 @@ export default function Home() {
         </button>
       </nav>
 
-      {tab === 'capture' && (
+      {tab === 'capture' && subscription && !subscription.entitled && (
+        <section className="view active">
+          <div className="empty">
+            <div className="empty-mark">Capture is paused</div>
+            <div className="empty-sub">Your trial has ended. Subscribe to keep adding new ideas.</div>
+            <button className="btn" style={{ marginTop: 16 }} onClick={upgrade}>
+              Subscribe
+            </button>
+          </div>
+        </section>
+      )}
+
+      {tab === 'capture' && (!subscription || subscription.entitled) && (
         <section className="view active">
           <div className="row">
             <div className="field">
@@ -278,7 +338,19 @@ export default function Home() {
         </section>
       )}
 
-      {tab === 'review' && (
+      {tab === 'review' && subscription && !subscription.entitled && (
+        <section className="view active">
+          <div className="empty">
+            <div className="empty-mark">Review is paused</div>
+            <div className="empty-sub">Your trial has ended. Subscribe to keep reviewing.</div>
+            <button className="btn" style={{ marginTop: 16 }} onClick={upgrade}>
+              Subscribe
+            </button>
+          </div>
+        </section>
+      )}
+
+      {tab === 'review' && (!subscription || subscription.entitled) && (
         <section className="view active">
           {reviewQueue.length === 0 ? (
             <div className="empty">
