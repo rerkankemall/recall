@@ -145,6 +145,24 @@ export default function Home() {
     URL.revokeObjectURL(url);
   }
 
+  // ---- delete ----
+  async function deleteIdea(idea: Idea) {
+    if (!confirm('Delete this saved idea? This can\'t be undone.')) return;
+    await fetch(`/api/ideas/${idea.id}`, { method: 'DELETE' });
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.delete(idea.id);
+      return next;
+    });
+    await loadData();
+  }
+
+  async function deleteEntry(entry: Entry) {
+    if (!confirm(`Delete "${entry.title}" and all its saved ideas? This can't be undone.`)) return;
+    await fetch(`/api/entries/${entry.id}`, { method: 'DELETE' });
+    await loadData();
+  }
+
   // ---- review ----
   async function rate(idea: Idea, grade: 'again' | 'hard' | 'good' | 'easy') {
     await fetch(`/api/ideas/${idea.id}/review`, {
@@ -364,6 +382,9 @@ export default function Home() {
                     <div className="entry-title">{entry.title}</div>
                     <div className="entry-meta">
                       {entry.type.toUpperCase()} · {new Date(entry.created_at).toLocaleDateString()}
+                      <button className="entry-delete" title="Delete entry" onClick={() => deleteEntry(entry)}>
+                        Delete
+                      </button>
                     </div>
                   </div>
                   {entryIdeas.map((idea) => {
@@ -378,6 +399,9 @@ export default function Home() {
                             onChange={() => toggleSelect(idea.id)}
                           />
                           <div className="card-text">{idea.text}</div>
+                          <button className="remove" title="Delete idea" onClick={() => deleteIdea(idea)}>
+                            ×
+                          </button>
                         </div>
                         <div className="card-foot">
                           <div className="decay-bar">
