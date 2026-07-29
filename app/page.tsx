@@ -36,6 +36,17 @@ export default function Home() {
 
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [openEntryId, setOpenEntryId] = useState<string | null>(null);
+
+  function openEntry(entryId: string) {
+    setSelected(new Set());
+    setOpenEntryId(entryId);
+  }
+
+  function closeEntry() {
+    setSelected(new Set());
+    setOpenEntryId(null);
+  }
 
   const [subscription, setSubscription] = useState<{
     status: string;
@@ -156,23 +167,39 @@ export default function Home() {
   }
 
   // ---- export ----
+  function downloadMarkdown(filename: string, lines: string[]) {
+    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function exportLibrary() {
-    const onlySelected = selected.size > 0;
     const lines: string[] = [`# Recall export`, `Exported ${new Date().toLocaleString()}`, ''];
     entries.forEach((entry) => {
-      const entryIdeas = ideas.filter((i) => i.entry_id === entry.id && (!onlySelected || selected.has(i.id)));
+      const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
       if (entryIdeas.length === 0) return;
       lines.push(`## ${entry.title} (${entry.type})`, '');
       entryIdeas.forEach((idea) => lines.push(`- ${idea.text}`));
       lines.push('');
     });
-    const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `recall-export-${new Date().toISOString().slice(0, 10)}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadMarkdown(`recall-export-${new Date().toISOString().slice(0, 10)}.md`, lines);
+  }
+
+  function exportEntry(entry: Entry) {
+    const onlySelected = selected.size > 0;
+    const entryIdeas = ideas.filter((i) => i.entry_id === entry.id && (!onlySelected || selected.has(i.id)));
+    const lines: string[] = [
+      `# ${entry.title}`,
+      `${entry.type} · ${new Date(entry.created_at).toLocaleDateString()}`,
+      '',
+    ];
+    entryIdeas.forEach((idea) => lines.push(`- ${idea.text}`));
+    const safeName = entry.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'entry';
+    downloadMarkdown(`${safeName}.md`, lines);
   }
 
   // ---- delete ----
@@ -190,6 +217,7 @@ export default function Home() {
   async function deleteEntry(entry: Entry) {
     if (!confirm(`Delete "${entry.title}" and all its saved ideas? This can't be undone.`)) return;
     await fetch(`/api/entries/${entry.id}`, { method: 'DELETE' });
+    if (openEntryId === entry.id) closeEntry();
     await loadData();
   }
 
@@ -402,95 +430,149 @@ export default function Home() {
 
       {tab === 'library' && (
         <section className="view active">
-          {entries.length > 0 && (
-            <div className="library-toolbar">
-              <input
-                type="text"
-                className="search-input"
-                placeholder="Search your saved ideas…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <button className="btn-ghost" onClick={exportLibrary}>
-                {selected.size > 0 ? `Export selected (${selected.size})` : 'Export all'}
-              </button>
-              {selected.size > 0 && (
-                <button className="btn-ghost" onClick={() => setSelected(new Set())}>
-                  Clear
-                </button>
-              )}
-            </div>
-          )}
-          {entries.length === 0 ? (
-            <div className="empty">
-              <div className="empty-mark">Your library is empty</div>
-              <div className="empty-sub">Capture something you read and it'll show up here.</div>
-            </div>
-          ) : (
-            (() => {
-              const query = search.trim().toLowerCase();
-              const visibleEntries = entries.filter(
-                (entry) =>
-                  !query ||
-                  entry.title.toLowerCase().includes(query) ||
-                  ideas.some((i) => i.entry_id === entry.id && i.text.toLowerCase().includes(query))
-              );
-              if (visibleEntries.length === 0) {
-                return (
-                  <div className="empty">
-                    <div className="empty-mark">No matches</div>
-                    <div className="empty-sub">Try a different search term.</div>
-                  </div>
-                );
-              }
-              return visibleEntries.map((entry) => {
-              const entryIdeas = ideas.filter(
-                (i) => i.entry_id === entry.id && (!query || i.text.toLowerCase().includes(query) || entry.title.toLowerCase().includes(query))
-              );
-              if (entryIdeas.length === 0) return null;
+          {(() => {
+            const activeEntry = openEntryId ? entries.find((e) => e.id === openEntryId) : null;
+
+            if (activeEntry) {
+              const entryIdeas = ideas.filter((i) => i.entry_id === activeEntry.id);
               return (
-                <div className="entry-group" key={entry.id}>
-                  <div className="entry-head">
-                    <div className="entry-title">{entry.title}</div>
-                    <div className="entry-meta">
-                      {entry.type.toUpperCase()} · {new Date(entry.created_at).toLocaleDateString()}
-                      <button className="entry-delete" title="Delete entry" onClick={() => deleteEntry(entry)}>
-                        Delete
-                      </button>
+                <>
+                  <button className="btn-ghost" style={{ marginBottom: 16 }} onClick={closeEntry}>
+                    ← Back to Library
+                  </button>
+                  <div className="entry-group">
+                    <div className="entry-head">
+                      <div className="entry-title">{activeEntry.title}</div>
+                      <div className="entry-meta">
+                        {activeEntry.type.toUpperCase()} · {new Date(activeEntry.created_at).toLocaleDateString()}
+                        <button className="entry-delete" title="Delete file" onClick={() => deleteEntry(activeEntry)}>
+                          Delete file
+                        </button>
+                      </div>
                     </div>
+                    {entryIdeas.length > 0 && (
+                      <div className="library-toolbar">
+                        <button className="btn-ghost" onClick={() => exportEntry(activeEntry)}>
+                          {selected.size > 0 ? `Export selected (${selected.size})` : 'Export this file'}
+                        </button>
+                        {selected.size > 0 && (
+                          <button className="btn-ghost" onClick={() => setSelected(new Set())}>
+                            Clear
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {entryIdeas.length === 0 ? (
+                      <div className="empty">
+                        <div className="empty-mark">This file is empty</div>
+                        <div className="empty-sub">Every idea in it has been deleted.</div>
+                      </div>
+                    ) : (
+                      entryIdeas.map((idea) => {
+                        const overdue = new Date(idea.due_date) <= new Date();
+                        return (
+                          <div className={`card ${selected.has(idea.id) ? 'card-selected' : ''}`} key={idea.id}>
+                            <div className="card-row">
+                              <input
+                                type="checkbox"
+                                className="card-check"
+                                checked={selected.has(idea.id)}
+                                onChange={() => toggleSelect(idea.id)}
+                              />
+                              <div className="card-text">{idea.text}</div>
+                              <button className="remove" title="Delete idea" onClick={() => deleteIdea(idea)}>
+                                ×
+                              </button>
+                            </div>
+                            <div className="card-foot">
+                              <div className="decay-bar">
+                                <div className={`decay-fill ${overdue ? 'overdue' : ''}`} style={{ width: overdue ? '100%' : '40%' }} />
+                              </div>
+                              <div className="card-due">
+                                {overdue ? 'due now' : 'due ' + new Date(idea.due_date).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
-                  {entryIdeas.map((idea) => {
-                    const overdue = new Date(idea.due_date) <= new Date();
-                    return (
-                      <div className={`card ${selected.has(idea.id) ? 'card-selected' : ''}`} key={idea.id}>
-                        <div className="card-row">
-                          <input
-                            type="checkbox"
-                            className="card-check"
-                            checked={selected.has(idea.id)}
-                            onChange={() => toggleSelect(idea.id)}
-                          />
-                          <div className="card-text">{idea.text}</div>
-                          <button className="remove" title="Delete idea" onClick={() => deleteIdea(idea)}>
-                            ×
+                </>
+              );
+            }
+
+            return (
+              <>
+                {entries.length > 0 && (
+                  <div className="library-toolbar">
+                    <input
+                      type="text"
+                      className="search-input"
+                      placeholder="Search your saved ideas…"
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                    />
+                    <button className="btn-ghost" onClick={exportLibrary}>
+                      Export all
+                    </button>
+                  </div>
+                )}
+                {entries.length === 0 ? (
+                  <div className="empty">
+                    <div className="empty-mark">Your library is empty</div>
+                    <div className="empty-sub">Capture something you read and it'll show up here.</div>
+                  </div>
+                ) : (
+                  (() => {
+                    const query = search.trim().toLowerCase();
+                    const visibleEntries = entries.filter((entry) => {
+                      const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
+                      if (entryIdeas.length === 0) return false;
+                      return (
+                        !query ||
+                        entry.title.toLowerCase().includes(query) ||
+                        entryIdeas.some((i) => i.text.toLowerCase().includes(query))
+                      );
+                    });
+                    if (visibleEntries.length === 0) {
+                      return (
+                        <div className="empty">
+                          <div className="empty-mark">No matches</div>
+                          <div className="empty-sub">Try a different search term.</div>
+                        </div>
+                      );
+                    }
+                    return visibleEntries.map((entry) => {
+                      const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
+                      const dueCount = entryIdeas.filter((i) => new Date(i.due_date) <= new Date()).length;
+                      return (
+                        <div className="file-row" key={entry.id} onClick={() => openEntry(entry.id)}>
+                          <div className="file-info">
+                            <div className="entry-title">{entry.title}</div>
+                            <div className="entry-meta">
+                              {entry.type.toUpperCase()} · {new Date(entry.created_at).toLocaleDateString()} ·{' '}
+                              {entryIdeas.length} idea{entryIdeas.length === 1 ? '' : 's'}
+                              {dueCount > 0 && <span className="tab-badge">{dueCount}</span>}
+                            </div>
+                          </div>
+                          <button
+                            className="entry-delete"
+                            title="Delete file"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteEntry(entry);
+                            }}
+                          >
+                            Delete
                           </button>
                         </div>
-                        <div className="card-foot">
-                          <div className="decay-bar">
-                            <div className={`decay-fill ${overdue ? 'overdue' : ''}`} style={{ width: overdue ? '100%' : '40%' }} />
-                          </div>
-                          <div className="card-due">
-                            {overdue ? 'due now' : 'due ' + new Date(idea.due_date).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-              });
-            })()
-          )}
+                      );
+                    });
+                  })()
+                )}
+              </>
+            );
+          })()}
         </section>
       )}
     </div>

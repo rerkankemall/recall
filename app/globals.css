@@ -144,6 +144,16 @@ body { margin:0; }
   }
   .entry-delete:hover{ color:var(--rust); }
 
+  .file-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
+    padding:14px 16px; margin-bottom:8px; cursor:pointer; transition:border-color .15s ease;
+  }
+  .file-row:hover{ border-color:var(--amber); }
+  .file-row .entry-title{ font-size:15px; margin-bottom:4px; }
+  .file-row .entry-meta{ white-space:normal; }
+  .file-info{ min-width:0; }
+
   .card{
     border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
     padding:14px 16px; margin-bottom:8px;
