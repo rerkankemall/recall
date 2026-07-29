@@ -28,6 +28,8 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [subscription, setSubscription] = useState<{ status: string } | null>(null);
+  const [openingPortal, setOpeningPortal] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -55,7 +57,21 @@ export default function SettingsPage() {
           });
         }
       });
+    fetch('/api/subscription')
+      .then((res) => res.json())
+      .then((data) => setSubscription(data));
   }, [checkingAuth]);
+
+  async function manageSubscription() {
+    setOpeningPortal(true);
+    const res = await fetch('/api/stripe/portal', { method: 'POST' });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else {
+      alert('Could not open billing portal: ' + (data.error || 'unknown error'));
+      setOpeningPortal(false);
+    }
+  }
 
   async function save() {
     if (!settings) return;
@@ -85,6 +101,18 @@ export default function SettingsPage() {
       </div>
 
       <section className="view active">
+        {subscription?.status === 'active' && (
+          <div className="field">
+            <label>Subscription</label>
+            <div className="hint" style={{ marginBottom: 10 }}>
+              Your Recall subscription is active.
+            </div>
+            <button className="btn-ghost" onClick={manageSubscription} disabled={openingPortal}>
+              {openingPortal ? 'Opening…' : 'Manage subscription'}
+            </button>
+          </div>
+        )}
+
         <div className="field">
           <label>Daily review reminder email</label>
           <select
