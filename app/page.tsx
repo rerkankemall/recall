@@ -403,7 +403,7 @@ export default function Home() {
                     <div className="review-eyebrow">
                       {entry?.type} · from "{entry?.title}"
                     </div>
-                    <div className="review-prompt">What was the idea here?</div>
+                    <div className="review-prompt">Try to recall what you saved from this.</div>
                     {!revealed ? (
                       <button className="btn reveal-btn" onClick={() => setRevealed(true)}>
                         Reveal
@@ -412,9 +412,16 @@ export default function Home() {
                       <>
                         <div className="review-answer">{idea.text}</div>
                         <div className="rate-row">
-                          {(['again', 'hard', 'good', 'easy'] as const).map((g) => (
-                            <button key={g} className="rate-btn" onClick={() => rate(idea, g)}>
-                              <span className="rk">{g}</span>
+                          {(
+                            [
+                              ['again', 'Forgot it'],
+                              ['hard', 'Fuzzy'],
+                              ['good', 'Remembered it'],
+                              ['easy', 'Nailed it'],
+                            ] as const
+                          ).map(([g, label]) => (
+                            <button key={g} className="rate-btn" data-r={g} onClick={() => rate(idea, g)}>
+                              <span className="rk">{label}</span>
                             </button>
                           ))}
                         </div>
