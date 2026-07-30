@@ -19,7 +19,7 @@ export default function Home() {
   const router = useRouter();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [tab, setTab] = useState<'capture' | 'review' | 'library' | 'stats'>('capture');
+  const [tab, setTab] = useState<'capture' | 'review' | 'library' | 'stats' | 'import'>('capture');
 
   const [entries, setEntries] = useState<Entry[]>([]);
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -183,6 +183,39 @@ export default function Home() {
     setTab('library');
   }
 
+  // ---- import ----
+  const [importFormat, setImportFormat] = useState<'kindle' | 'readwise'>('kindle');
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importStatus, setImportStatus] = useState<{ kind: 'idle' | 'loading' | 'error' | 'done'; msg?: string }>({
+    kind: 'idle',
+  });
+
+  async function runImport() {
+    if (!importFile) {
+      alert('Choose a file first.');
+      return;
+    }
+    setImportStatus({ kind: 'loading' });
+    try {
+      const content = await importFile.text();
+      const res = await fetch('/api/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ format: importFormat, content }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Import failed');
+      setImportStatus({
+        kind: 'done',
+        msg: `Imported ${data.ideasImported} highlight${data.ideasImported === 1 ? '' : 's'} across ${data.entriesCreated} new file${data.entriesCreated === 1 ? '' : 's'}${data.duplicatesSkipped > 0 ? ` (skipped ${data.duplicatesSkipped} already-imported duplicates)` : ''}.`,
+      });
+      setImportFile(null);
+      await loadData();
+    } catch (e: any) {
+      setImportStatus({ kind: 'error', msg: e.message });
+    }
+  }
+
   // ---- export ----
   function downloadMarkdown(filename: string, lines: string[]) {
     const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
@@ -313,6 +346,9 @@ export default function Home() {
         </button>
         <button className={tab === 'stats' ? 'active' : ''} onClick={() => setTab('stats')}>
           STATS
+        </button>
+        <button className={tab === 'import' ? 'active' : ''} onClick={() => setTab('import')}>
+          IMPORT
         </button>
       </nav>
 
@@ -649,6 +685,53 @@ export default function Home() {
               </div>
             </>
           )}
+        </section>
+      )}
+
+      {tab === 'import' && subscription && !subscription.entitled && (
+        <section className="view active">
+          <div className="empty">
+            <div className="empty-mark">Import is paused</div>
+            <div className="empty-sub">Your trial has ended. Subscribe to import highlights.</div>
+            <button className="btn" style={{ marginTop: 16 }} onClick={upgrade}>
+              Subscribe
+            </button>
+          </div>
+        </section>
+      )}
+
+      {tab === 'import' && (!subscription || subscription.entitled) && (
+        <section className="view active">
+          <div className="row">
+            <div className="field">
+              <label>Source</label>
+              <select value={importFormat} onChange={(e) => setImportFormat(e.target.value as 'kindle' | 'readwise')}>
+                <option value="kindle">Kindle (My Clippings.txt)</option>
+                <option value="readwise">Readwise (CSV export)</option>
+              </select>
+            </div>
+            <div className="field">
+              <label>File</label>
+              <input
+                type="file"
+                accept={importFormat === 'kindle' ? '.txt' : '.csv'}
+                onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+              />
+            </div>
+          </div>
+          <div className="hint">
+            {importFormat === 'kindle'
+              ? 'Find "My Clippings.txt" on your Kindle when connected via USB (it\'s in the root "documents" folder).'
+              : 'From Readwise: Settings → Export → Export all highlights as CSV.'}
+            {' '}Each book becomes its own file in your Library, and each highlight becomes a saved idea.
+          </div>
+          <button className="btn" style={{ marginTop: 14 }} onClick={runImport} disabled={importStatus.kind === 'loading'}>
+            {importStatus.kind === 'loading' ? 'Importing…' : 'Import'}
+          </button>
+          {importStatus.kind === 'error' && (
+            <div className="extract-status">Import failed: {importStatus.msg}</div>
+          )}
+          {importStatus.kind === 'done' && <div className="extract-status">{importStatus.msg}</div>}
         </section>
       )}
     </div>
