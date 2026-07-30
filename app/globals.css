@@ -144,6 +144,17 @@ body { margin:0; }
   }
   .entry-delete:hover{ color:var(--rust); }
 
+  .tag-chip-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
+  .tag-chip{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.02em;
+    border:1px solid var(--line); border-radius:12px; padding:3px 10px; background:transparent;
+    color:var(--ink-dim); cursor:pointer;
+  }
+  .tag-chip:hover{ border-color:var(--amber); color:var(--ink); }
+  .tag-chip.tag-chip-active{ background:var(--amber); border-color:var(--amber); color:var(--bg); }
+  .tag-chip.tag-chip-static{ cursor:default; padding:2px 8px; }
+  .tag-chip.tag-chip-static:hover{ border-color:var(--line); color:var(--ink-dim); }
+
   .file-row{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);

@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 
-type Entry = { id: string; title: string; type: string; created_at: string };
+type Entry = { id: string; title: string; type: string; created_at: string; tags: string[] };
 type Idea = {
   id: string;
   entry_id: string;
@@ -27,6 +27,7 @@ export default function Home() {
   const [title, setTitle] = useState('');
   const [type, setType] = useState('Book');
   const [content, setContent] = useState('');
+  const [tagsInput, setTagsInput] = useState('');
   const [drafts, setDrafts] = useState<string[]>([]);
   const [status, setStatus] = useState<{ kind: 'idle' | 'loading' | 'error'; msg?: string }>({ kind: 'idle' });
 
@@ -37,15 +38,37 @@ export default function Home() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openEntryId, setOpenEntryId] = useState<string | null>(null);
+  const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [tagsEditInput, setTagsEditInput] = useState('');
 
   function openEntry(entryId: string) {
     setSelected(new Set());
     setOpenEntryId(entryId);
+    const entry = entries.find((e) => e.id === entryId);
+    setTagsEditInput((entry?.tags || []).join(', '));
   }
 
   function closeEntry() {
     setSelected(new Set());
     setOpenEntryId(null);
+  }
+
+  async function saveEntryTags(entry: Entry) {
+    const tags = tagsEditInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const res = await fetch(`/api/entries/${entry.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tags }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert('Could not save tags: ' + data.error);
+      return;
+    }
+    await loadData();
   }
 
   const [subscription, setSubscription] = useState<{
@@ -165,10 +188,14 @@ export default function Home() {
       alert('Add at least one idea before saving.');
       return;
     }
+    const tags = tagsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
     const res = await fetch('/api/ideas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title || 'Untitled', type, ideas: valid }),
+      body: JSON.stringify({ title: title || 'Untitled', type, ideas: valid, tags }),
     });
     if (!res.ok) {
       const data = await res.json();
@@ -177,6 +204,7 @@ export default function Home() {
     }
     setTitle('');
     setContent('');
+    setTagsInput('');
     setDrafts([]);
     setStatus({ kind: 'idle' });
     await loadData();
@@ -414,6 +442,15 @@ export default function Home() {
                   </button>
                 </div>
               ))}
+              <div className="field" style={{ marginTop: 14 }}>
+                <label>Tags (optional, comma separated)</label>
+                <input
+                  type="text"
+                  value={tagsInput}
+                  onChange={(e) => setTagsInput(e.target.value)}
+                  placeholder="e.g. productivity, psychology"
+                />
+              </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
                 <button className="btn" onClick={saveEntry}>
                   Save to library
@@ -518,6 +555,21 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
+                    <div className="field" style={{ marginBottom: 16 }}>
+                      <label>Tags</label>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <input
+                          type="text"
+                          value={tagsEditInput}
+                          onChange={(e) => setTagsEditInput(e.target.value)}
+                          placeholder="e.g. productivity, psychology"
+                          style={{ flex: 1 }}
+                        />
+                        <button className="btn-ghost" onClick={() => saveEntryTags(activeEntry)}>
+                          Save tags
+                        </button>
+                      </div>
+                    </div>
                     {entryIdeas.length > 0 && (
                       <div className="library-toolbar">
                         <button className="btn-ghost" onClick={() => exportEntry(activeEntry)}>
@@ -569,6 +621,8 @@ export default function Home() {
               );
             }
 
+            const allTags = Array.from(new Set(entries.flatMap((e) => e.tags || []))).sort();
+
             return (
               <>
                 {entries.length > 0 && (
@@ -585,6 +639,19 @@ export default function Home() {
                     </button>
                   </div>
                 )}
+                {allTags.length > 0 && (
+                  <div className="tag-chip-row">
+                    {allTags.map((t) => (
+                      <button
+                        key={t}
+                        className={`tag-chip ${activeTag === t ? 'tag-chip-active' : ''}`}
+                        onClick={() => setActiveTag(activeTag === t ? null : t)}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {entries.length === 0 ? (
                   <div className="empty">
                     <div className="empty-mark">Your library is empty</div>
@@ -596,9 +663,11 @@ export default function Home() {
                     const visibleEntries = entries.filter((entry) => {
                       const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
                       if (entryIdeas.length === 0) return false;
+                      if (activeTag && !(entry.tags || []).includes(activeTag)) return false;
                       return (
                         !query ||
                         entry.title.toLowerCase().includes(query) ||
+                        (entry.tags || []).some((t) => t.toLowerCase().includes(query)) ||
                         entryIdeas.some((i) => i.text.toLowerCase().includes(query))
                       );
                     });
@@ -622,6 +691,15 @@ export default function Home() {
                               {entryIdeas.length} idea{entryIdeas.length === 1 ? '' : 's'}
                               {dueCount > 0 && <span className="tab-badge">{dueCount}</span>}
                             </div>
+                            {entry.tags && entry.tags.length > 0 && (
+                              <div className="tag-chip-row" style={{ marginTop: 6 }}>
+                                {entry.tags.map((t) => (
+                                  <span key={t} className="tag-chip tag-chip-static">
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
                           <button
                             className="entry-delete"

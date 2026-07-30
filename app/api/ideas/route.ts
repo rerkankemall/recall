@@ -36,14 +36,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Your trial has ended. Subscribe to keep saving new ideas.' }, { status: 403 });
   }
 
-  const { title, type, ideas } = await req.json();
+  const { title, type, ideas, tags } = await req.json();
   if (!Array.isArray(ideas) || ideas.length === 0) {
     return NextResponse.json({ error: 'No ideas to save' }, { status: 400 });
   }
 
+  const cleanTags = Array.isArray(tags)
+    ? Array.from(new Set(tags.map((t: string) => t.trim().toLowerCase()).filter(Boolean)))
+    : [];
+
   const { data: entry, error: entryErr } = await supabase
     .from('entries')
-    .insert({ title: title || 'Untitled', type: type || 'Note', user_id: user.id })
+    .insert({ title: title || 'Untitled', type: type || 'Note', user_id: user.id, tags: cleanTags })
     .select()
     .single();
 
