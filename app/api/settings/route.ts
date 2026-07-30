@@ -26,17 +26,23 @@ export async function GET() {
   return NextResponse.json({ settings: created });
 }
 
-// POST /api/settings  { digest_enabled, digest_hour, timezone }
+// POST /api/settings  { digest_enabled, digest_hour, timezone, digest_frequency_days }
 export async function POST(req: NextRequest) {
   const supabase = createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
-  const { digest_enabled, digest_hour, timezone } = await req.json();
+  const { digest_enabled, digest_hour, timezone, digest_frequency_days } = await req.json();
 
   const { data, error } = await supabase
     .from('user_settings')
-    .upsert({ user_id: user.id, digest_enabled, digest_hour, timezone })
+    .upsert({
+      user_id: user.id,
+      digest_enabled,
+      digest_hour,
+      timezone,
+      digest_frequency_days: Math.max(1, Math.min(60, Number(digest_frequency_days) || 1)),
+    })
     .select()
     .single();
 

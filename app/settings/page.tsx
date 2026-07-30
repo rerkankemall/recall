@@ -7,7 +7,16 @@ type Settings = {
   digest_enabled: boolean;
   digest_hour: number;
   timezone: string;
+  digest_frequency_days: number;
 };
+
+const FREQUENCY_PRESETS = [
+  { value: 1, label: 'Daily' },
+  { value: 2, label: 'Every 2 days' },
+  { value: 3, label: 'Every 3 days' },
+  { value: 7, label: 'Weekly' },
+  { value: 14, label: 'Every 2 weeks' },
+];
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const TIMEZONES = (typeof Intl.supportedValuesOf === 'function'
@@ -30,6 +39,7 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [subscription, setSubscription] = useState<{ status: string } | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
+  const [customFrequency, setCustomFrequency] = useState(false);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -48,12 +58,14 @@ export default function SettingsPage() {
             digest_enabled: data.settings.digest_enabled,
             digest_hour: data.settings.digest_hour,
             timezone: data.settings.timezone,
+            digest_frequency_days: data.settings.digest_frequency_days || 1,
           });
         } else {
           setSettings({
             digest_enabled: true,
             digest_hour: 8,
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            digest_frequency_days: 1,
           });
         }
       });
@@ -125,9 +137,52 @@ export default function SettingsPage() {
             <option value="off">Off</option>
           </select>
           <div className="hint">
-            Sends once a day, only if you have ideas due for review.
+            Only sends when you have ideas due for review.
           </div>
         </div>
+
+        {settings.digest_enabled && (
+          <div className="field">
+            <label>Remind me</label>
+            <select
+              value={
+                !customFrequency && FREQUENCY_PRESETS.some((p) => p.value === settings.digest_frequency_days)
+                  ? settings.digest_frequency_days
+                  : 'custom'
+              }
+              onChange={(e) => {
+                if (e.target.value === 'custom') {
+                  setCustomFrequency(true);
+                  return;
+                }
+                setCustomFrequency(false);
+                setSettings({ ...settings, digest_frequency_days: parseInt(e.target.value, 10) });
+              }}
+            >
+              {FREQUENCY_PRESETS.map((p) => (
+                <option key={p.value} value={p.value}>
+                  {p.label}
+                </option>
+              ))}
+              <option value="custom">Custom…</option>
+            </select>
+            {(customFrequency || !FREQUENCY_PRESETS.some((p) => p.value === settings.digest_frequency_days)) && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={settings.digest_frequency_days}
+                  onChange={(e) =>
+                    setSettings({ ...settings, digest_frequency_days: parseInt(e.target.value, 10) || 1 })
+                  }
+                  style={{ width: 70 }}
+                />
+                <span className="hint" style={{ margin: 0 }}>days</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {settings.digest_enabled && (
           <div className="row">

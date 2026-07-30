@@ -28,7 +28,9 @@ export async function GET(req: NextRequest) {
 
   for (const s of settings || []) {
     if (currentHourInTimezone(now, s.timezone) !== s.digest_hour) continue;
-    if (s.last_digest_sent_at && sameUtcDay(new Date(s.last_digest_sent_at), now)) continue;
+    if (s.last_digest_sent_at && daysBetweenUtcDates(new Date(s.last_digest_sent_at), now) < (s.digest_frequency_days || 1)) {
+      continue;
+    }
 
     const { data: ideas } = await supabase
       .from('ideas')
@@ -69,10 +71,8 @@ function currentHourInTimezone(date: Date, timeZone: string) {
   return parseInt(hourStr, 10);
 }
 
-function sameUtcDay(a: Date, b: Date) {
-  return (
-    a.getUTCFullYear() === b.getUTCFullYear() &&
-    a.getUTCMonth() === b.getUTCMonth() &&
-    a.getUTCDate() === b.getUTCDate()
-  );
+function daysBetweenUtcDates(a: Date, b: Date) {
+  const aDay = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate());
+  const bDay = Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate());
+  return Math.round((bDay - aDay) / (1000 * 60 * 60 * 24));
 }
