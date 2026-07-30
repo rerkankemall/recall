@@ -34,5 +34,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await supabase.from('review_log').insert({ user_id: user.id, idea_id: params.id, grade });
+
   return NextResponse.json({ idea: data });
 }

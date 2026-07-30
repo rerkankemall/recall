@@ -19,7 +19,7 @@ export default function Home() {
   const router = useRouter();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [tab, setTab] = useState<'capture' | 'review' | 'library'>('capture');
+  const [tab, setTab] = useState<'capture' | 'review' | 'library' | 'stats'>('capture');
 
   const [entries, setEntries] = useState<Entry[]>([]);
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -95,6 +95,23 @@ export default function Home() {
   useEffect(() => {
     if (!checkingAuth) loadSubscription();
   }, [checkingAuth, loadSubscription]);
+
+  const [stats, setStats] = useState<{
+    totalReviews: number;
+    streak: number;
+    reviewedThisWeek: number;
+    grid: { date: string; count: number }[];
+  } | null>(null);
+
+  const loadStats = useCallback(async () => {
+    const res = await fetch('/api/stats');
+    if (!res.ok) return;
+    setStats(await res.json());
+  }, []);
+
+  useEffect(() => {
+    if (!checkingAuth) loadStats();
+  }, [checkingAuth, loadStats]);
 
   async function upgrade() {
     const res = await fetch('/api/stripe/checkout', { method: 'POST' });
@@ -223,14 +240,19 @@ export default function Home() {
 
   // ---- review ----
   async function rate(idea: Idea, grade: 'again' | 'hard' | 'good' | 'easy') {
-    await fetch(`/api/ideas/${idea.id}/review`, {
+    const res = await fetch(`/api/ideas/${idea.id}/review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ grade }),
     });
+    if (!res.ok) {
+      alert("Couldn't save that rating — please try again.");
+      return;
+    }
     setRevealed(false);
     setReviewIdx((i) => i + 1);
     await loadData();
+    await loadStats();
   }
 
   if (checkingAuth) return null;
@@ -288,6 +310,9 @@ export default function Home() {
         </button>
         <button className={tab === 'library' ? 'active' : ''} onClick={() => setTab('library')}>
           LIBRARY
+        </button>
+        <button className={tab === 'stats' ? 'active' : ''} onClick={() => setTab('stats')}>
+          STATS
         </button>
       </nav>
 
@@ -580,6 +605,50 @@ export default function Home() {
               </>
             );
           })()}
+        </section>
+      )}
+
+      {tab === 'stats' && (
+        <section className="view active">
+          {!stats ? null : (
+            <>
+              <div className="streak-hero">
+                <div className="streak-number">{stats.streak}</div>
+                <div className="streak-label">
+                  {stats.streak === 0
+                    ? 'No streak yet — review something today to start one.'
+                    : `day${stats.streak === 1 ? '' : 's'} in a row. Keep it going.`}
+                </div>
+              </div>
+
+              <div className="stat-tiles">
+                <div className="stat-tile">
+                  <div className="stat-tile-value">{stats.reviewedThisWeek}</div>
+                  <div className="stat-tile-label">Reviewed this week</div>
+                </div>
+                <div className="stat-tile">
+                  <div className="stat-tile-value">{stats.totalReviews}</div>
+                  <div className="stat-tile-label">Total reviews</div>
+                </div>
+              </div>
+
+              <div className="field" style={{ marginTop: 8 }}>
+                <label>Last 12 weeks</label>
+                <div className="activity-grid">
+                  {stats.grid.map((day) => {
+                    const level = day.count === 0 ? 0 : day.count === 1 ? 1 : day.count === 2 ? 2 : 3;
+                    return (
+                      <div
+                        key={day.date}
+                        className={`activity-cell activity-l${level}`}
+                        title={`${day.date}: ${day.count} review${day.count === 1 ? '' : 's'}`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </section>
       )}
     </div>
