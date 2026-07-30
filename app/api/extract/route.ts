@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
         system:
-          "You extract the key ideas worth remembering from a piece of text the user read. Return ONLY a JSON array of 3-6 short strings, each a single self-contained idea or fact, written so it stands alone (no 'the article says'). No markdown, no preamble, no code fences — raw JSON array only.",
+          "You extract the key ideas worth remembering from a piece of text the user read, and suggest topic tags for it. Return ONLY a JSON object of the shape {\"ideas\": [...], \"tags\": [...]} — \"ideas\" is 3-6 short strings, each a single self-contained idea or fact, written so it stands alone (no 'the article says'); \"tags\" is 1-3 short lowercase single-or-two-word topic tags (e.g. \"productivity\", \"machine learning\") describing the subject matter, not the source type. No markdown, no preamble, no code fences — raw JSON object only.",
         messages: [
           {
             role: 'user',
@@ -68,16 +68,19 @@ export async function POST(req: NextRequest) {
     const raw = (data.content || []).map((b: any) => b.text || '').join('\n');
     const clean = raw.replace(/```json|```/g, '').trim();
 
-    let ideas: string[];
+    let parsed: { ideas?: unknown; tags?: unknown };
     try {
-      ideas = JSON.parse(clean);
+      parsed = JSON.parse(clean);
     } catch {
-      const match = clean.match(/\[[\s\S]*\]/);
-      if (!match) throw new Error('Model did not return a parseable list');
-      ideas = JSON.parse(match[0]);
+      const match = clean.match(/\{[\s\S]*\}/);
+      if (!match) throw new Error('Model did not return a parseable response');
+      parsed = JSON.parse(match[0]);
     }
 
-    if (!Array.isArray(ideas) || ideas.length === 0) {
+    const ideas = Array.isArray(parsed.ideas) ? parsed.ideas : [];
+    const tags = Array.isArray(parsed.tags) ? parsed.tags : [];
+
+    if (ideas.length === 0) {
       return NextResponse.json({ error: 'No ideas extracted' }, { status: 502 });
     }
 
@@ -88,7 +91,7 @@ export async function POST(req: NextRequest) {
         .eq('user_id', user.id);
     }
 
-    return NextResponse.json({ ideas: ideas.map(String) });
+    return NextResponse.json({ ideas: ideas.map(String), tags: tags.map(String) });
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Extraction failed' }, { status: 500 });
   }

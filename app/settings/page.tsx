@@ -107,7 +107,7 @@ export default function SettingsPage() {
           <span className="brand-mark">Recall</span>
           <span className="brand-tag">SETTINGS</span>
         </div>
-        <button className="btn-ghost" onClick={() => router.push('/')}>
+        <button className="btn-ghost" onClick={() => router.push('/app')}>
           Back
         </button>
       </div>

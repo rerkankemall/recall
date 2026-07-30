@@ -15,8 +15,8 @@ export async function POST() {
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
     customer_email: user.email,
     client_reference_id: user.id,
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/?checkout=success`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/?checkout=cancelled`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/app?checkout=success`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/app?checkout=cancelled`,
   });
 
   return NextResponse.json({ url: session.url });

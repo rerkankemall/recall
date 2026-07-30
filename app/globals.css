@@ -247,10 +247,41 @@ body { margin:0; }
   .activity-l2{ background:var(--amber-dim); }
   .activity-l3{ background:var(--amber); }
 
+  /* onboarding */
+  .onboarding-card{
+    border:1px solid var(--amber-dim); border-radius:var(--radius); background:var(--surface);
+    padding:20px; margin-bottom:26px;
+  }
+  .onboarding-title{ font-family:'Fraunces', serif; font-size:18px; font-weight:600; margin-bottom:8px; }
+  .onboarding-body{ font-size:13px; line-height:1.6; color:var(--ink-dim); margin-bottom:14px; }
+
+  /* landing page */
+  .landing-shell{ max-width:640px; margin:0 auto; padding:60px 20px 100px; }
+  .landing-hero{ text-align:center; margin-bottom:60px; }
+  .landing-hero .brand{ display:flex; align-items:baseline; justify-content:center; gap:10px; margin-bottom:40px; }
+  .landing-headline{
+    font-family:'Fraunces', serif; font-size:32px; font-weight:600; line-height:1.25;
+    margin:0 0 18px; letter-spacing:-0.01em;
+  }
+  .landing-sub{ font-size:15px; line-height:1.65; color:var(--ink-dim); max-width:480px; margin:0 auto 28px; }
+  .landing-cta{ font-size:14px; padding:13px 28px; }
+  .landing-note{ font-size:12px; color:var(--ink-faint); margin-top:14px; }
+  .landing-features{ display:grid; grid-template-columns:repeat(3, 1fr); gap:20px; }
+  .landing-feature{
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); padding:20px;
+  }
+  .landing-feature-title{
+    font-family:'IBM Plex Mono', monospace; font-size:12px; letter-spacing:.04em; text-transform:uppercase;
+    color:var(--amber); margin-bottom:10px;
+  }
+  .landing-feature-body{ font-size:13px; line-height:1.6; color:var(--ink-dim); }
+
   @media (max-width:480px){
     .row{ flex-direction:column; }
     .brand-mark{ font-size:22px; }
     .clock{ display:none; }
+    .landing-headline{ font-size:26px; }
+    .landing-features{ grid-template-columns:1fr; }
   }
 
   @media (prefers-reduced-motion: reduce){
