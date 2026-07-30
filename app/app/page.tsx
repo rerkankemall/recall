@@ -102,12 +102,14 @@ export default function Home() {
   }, []);
 
   // ---- load library ----
+  const [dataLoaded, setDataLoaded] = useState(false);
   const loadData = useCallback(async () => {
     const res = await fetch('/api/ideas');
     if (!res.ok) return;
     const data = await res.json();
     setEntries(data.entries || []);
     setIdeas(data.ideas || []);
+    setDataLoaded(true);
   }, []);
 
   useEffect(() => {
@@ -408,7 +410,7 @@ export default function Home() {
 
       {tab === 'capture' && (!subscription || subscription.entitled) && (
         <section className="view active">
-          {entries.length === 0 && (
+          {dataLoaded && entries.length === 0 && (
             <div className="onboarding-card">
               <div className="onboarding-title">Welcome to Recall</div>
               <div className="onboarding-body">
