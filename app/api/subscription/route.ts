@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
-import { getOrCreateSubscription, isEntitled, TRIAL_WORD_LIMIT } from '@/lib/entitlement';
+import { getOrCreateSubscription, isEntitled, TRIAL_WORD_LIMIT, SUBSCRIBER_WORD_LIMIT } from '@/lib/entitlement';
 
 // GET /api/subscription -> trial/paid status for the signed-in user
 export async function GET() {
@@ -15,5 +15,7 @@ export async function GET() {
     entitled: isEntitled(sub),
     trial_words_used: sub.trial_words_used,
     trial_word_limit: TRIAL_WORD_LIMIT,
+    sub_words_used: sub.status === 'active' && sub.current_period_end && sub.sub_words_period_end === sub.current_period_end ? sub.sub_words_used : 0,
+    sub_word_limit: SUBSCRIBER_WORD_LIMIT,
   });
 }

@@ -23,10 +23,16 @@ export async function POST(req: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.client_reference_id;
     if (userId) {
+      let currentPeriodEnd: string | null = null;
+      if (session.subscription) {
+        const stripeSub = await stripe.subscriptions.retrieve(session.subscription as string);
+        currentPeriodEnd = new Date(stripeSub.current_period_end * 1000).toISOString();
+      }
       await supabase.from('subscriptions').upsert({
         user_id: userId,
         stripe_customer_id: session.customer as string,
         status: 'active',
+        current_period_end: currentPeriodEnd,
       });
     }
   }
@@ -35,7 +41,10 @@ export async function POST(req: NextRequest) {
     const sub = event.data.object as Stripe.Subscription;
     await supabase
       .from('subscriptions')
-      .update({ status: sub.status === 'active' ? 'active' : sub.status })
+      .update({
+        status: sub.status === 'active' ? 'active' : sub.status,
+        current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+      })
       .eq('stripe_customer_id', sub.customer as string);
   }
 

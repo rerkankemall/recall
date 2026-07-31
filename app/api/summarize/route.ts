@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
-import { getOrCreateSubscription, isEntitled, checkTrialWordLimit, recordWordUsage } from '@/lib/entitlement';
+import { getOrCreateSubscription, isEntitled, checkWordLimit, recordWordUsage } from '@/lib/entitlement';
 import { isYoutubeUrl, fetchYoutubeTranscript } from '@/lib/youtubeTranscript';
 
 // This route (like /api/extract) is one of the only places ANTHROPIC_API_KEY
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
 
-  const limitError = checkTrialWordLimit(sub, wordCount);
+  const limitError = checkWordLimit(sub, wordCount);
   if (limitError) return NextResponse.json({ error: limitError }, { status: 403 });
 
   try {

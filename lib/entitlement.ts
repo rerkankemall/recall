@@ -2,6 +2,7 @@ import { createAdminSupabase } from './supabaseServer';
 
 const TRIAL_DAYS = 14;
 export const TRIAL_WORD_LIMIT = 10000;
+export const SUBSCRIBER_WORD_LIMIT = 500000;
 
 export type Subscription = {
   user_id: string;
@@ -9,6 +10,8 @@ export type Subscription = {
   trial_ends_at: string | null;
   current_period_end: string | null;
   trial_words_used: number;
+  sub_words_used: number;
+  sub_words_period_end: string | null;
 };
 
 // Fetches the user's subscription row, creating a fresh 14-day trial the
@@ -44,21 +47,46 @@ export function isEntitled(sub: Subscription): boolean {
   return false;
 }
 
-// Returns an error message if this word count would exceed the trial budget,
-// or null if it's fine to proceed (always fine for non-trialing users).
-export function checkTrialWordLimit(sub: Subscription, wordCount: number): string | null {
-  if (sub.status !== 'trialing') return null;
-  const remaining = TRIAL_WORD_LIMIT - sub.trial_words_used;
-  if (wordCount > remaining) {
-    return `This would use ${wordCount} words, but you only have ${Math.max(0, remaining)} words left in your trial's ${TRIAL_WORD_LIMIT}-word limit. Subscribe for unlimited use.`;
+// Returns an error message if this word count would exceed the caller's budget
+// (the trial's total cap, or a subscriber's per-billing-period cap), or null if
+// it's fine to proceed. A manually-activated subscription with no Stripe-driven
+// current_period_end (e.g. the owner's own account) has no period cap either.
+export function checkWordLimit(sub: Subscription, wordCount: number): string | null {
+  if (sub.status === 'trialing') {
+    const remaining = TRIAL_WORD_LIMIT - sub.trial_words_used;
+    if (wordCount > remaining) {
+      return `This would use ${wordCount} words, but you only have ${Math.max(0, remaining)} words left in your trial's ${TRIAL_WORD_LIMIT}-word limit. Subscribe for unlimited use.`;
+    }
+    return null;
   }
+
+  if (sub.status === 'active' && sub.current_period_end) {
+    const periodRolled = sub.sub_words_period_end !== sub.current_period_end;
+    const used = periodRolled ? 0 : sub.sub_words_used;
+    const remaining = SUBSCRIBER_WORD_LIMIT - used;
+    if (wordCount > remaining) {
+      return `This would use ${wordCount} words, but you only have ${Math.max(0, remaining)} words left in this billing period's ${SUBSCRIBER_WORD_LIMIT}-word limit. It resets when your subscription renews.`;
+    }
+  }
+
   return null;
 }
 
 export async function recordWordUsage(userId: string, sub: Subscription, wordCount: number) {
-  if (sub.status !== 'trialing') return;
-  await createAdminSupabase()
-    .from('subscriptions')
-    .update({ trial_words_used: sub.trial_words_used + wordCount })
-    .eq('user_id', userId);
+  if (sub.status === 'trialing') {
+    await createAdminSupabase()
+      .from('subscriptions')
+      .update({ trial_words_used: sub.trial_words_used + wordCount })
+      .eq('user_id', userId);
+    return;
+  }
+
+  if (sub.status === 'active' && sub.current_period_end) {
+    const periodRolled = sub.sub_words_period_end !== sub.current_period_end;
+    const used = periodRolled ? 0 : sub.sub_words_used;
+    await createAdminSupabase()
+      .from('subscriptions')
+      .update({ sub_words_used: used + wordCount, sub_words_period_end: sub.current_period_end })
+      .eq('user_id', userId);
+  }
 }
