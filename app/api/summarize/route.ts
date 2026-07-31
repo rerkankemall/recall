@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { getOrCreateSubscription, isEntitled, checkTrialWordLimit, recordWordUsage } from '@/lib/entitlement';
+import { isYoutubeUrl, fetchYoutubeTranscript } from '@/lib/youtubeTranscript';
 
 // This route (like /api/extract) is one of the only places ANTHROPIC_API_KEY
 // is read — it runs server-side only, so the key never reaches the browser.
@@ -16,9 +17,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Your trial has ended. Subscribe to keep summarizing.' }, { status: 403 });
   }
 
-  const { title, type, content } = await req.json();
+  const body = await req.json();
+  const { title, type } = body;
+  let content = body.content;
   if (!content || !content.trim()) {
     return NextResponse.json({ error: 'No content provided' }, { status: 400 });
+  }
+
+  if (isYoutubeUrl(content)) {
+    try {
+      content = await fetchYoutubeTranscript(content);
+    } catch (err: any) {
+      return NextResponse.json({ error: err.message || 'Could not fetch this video\'s transcript' }, { status: 502 });
+    }
   }
 
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;

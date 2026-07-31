@@ -477,8 +477,8 @@ export default function Home() {
           </div>
           <div className="field">
             <label>Paste what you read, or tell it in your own words</label>
-            <textarea value={content} onChange={(e) => setContent(e.target.value)} />
-            <div className="hint">Afterword reads this and pulls out the ideas worth remembering.</div>
+            <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Paste text, or a YouTube video link…" />
+            <div className="hint">Afterword reads this and pulls out the ideas worth remembering. You can also paste a YouTube video link instead of text.</div>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn" onClick={extractIdeas} disabled={status.kind === 'loading'}>
