@@ -484,7 +484,7 @@ export default function Home() {
             <button className="btn" onClick={extractIdeas} disabled={status.kind === 'loading'}>
               Extract ideas →
             </button>
-            <button className="btn-ghost" onClick={summarizeContent} disabled={summarizing}>
+            <button className="btn" onClick={summarizeContent} disabled={summarizing}>
               {summarizing ? 'Summarizing…' : 'Summarize'}
             </button>
           </div>
