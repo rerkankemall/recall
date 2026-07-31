@@ -47,12 +47,14 @@ export default function Home() {
   const [openEntryId, setOpenEntryId] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [tagsEditInput, setTagsEditInput] = useState('');
+  const [titleEditInput, setTitleEditInput] = useState('');
 
   function openEntry(entryId: string) {
     setSelected(new Set());
     setOpenEntryId(entryId);
     const entry = entries.find((e) => e.id === entryId);
     setTagsEditInput((entry?.tags || []).join(', '));
+    setTitleEditInput(entry?.title || '');
   }
 
   function closeEntry() {
@@ -60,19 +62,24 @@ export default function Home() {
     setOpenEntryId(null);
   }
 
-  async function saveEntryTags(entry: Entry) {
+  async function saveEntryMeta(entry: Entry) {
     const tags = tagsEditInput
       .split(',')
       .map((t) => t.trim())
       .filter(Boolean);
+    const title = titleEditInput.trim();
+    if (!title) {
+      alert('Title cannot be empty.');
+      return;
+    }
     const res = await fetch(`/api/entries/${entry.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tags }),
+      body: JSON.stringify({ tags, title }),
     });
     if (!res.ok) {
       const data = await res.json();
-      alert('Could not save tags: ' + data.error);
+      alert('Could not save changes: ' + data.error);
       return;
     }
     await loadData();
@@ -627,7 +634,6 @@ export default function Home() {
                   </button>
                   <div className="entry-group">
                     <div className="entry-head">
-                      <div className="entry-title">{activeEntry.title}</div>
                       <div className="entry-meta">
                         {activeEntry.type.toUpperCase()} · {new Date(activeEntry.created_at).toLocaleDateString()}
                         <button className="entry-delete" title="Delete file" onClick={() => deleteEntry(activeEntry)}>
@@ -641,6 +647,14 @@ export default function Home() {
                         {activeEntry.summary}
                       </div>
                     )}
+                    <div className="field">
+                      <label>Title</label>
+                      <input
+                        type="text"
+                        value={titleEditInput}
+                        onChange={(e) => setTitleEditInput(e.target.value)}
+                      />
+                    </div>
                     <div className="field" style={{ marginBottom: 16 }}>
                       <label>Tags</label>
                       <div style={{ display: 'flex', gap: 8 }}>
@@ -651,8 +665,8 @@ export default function Home() {
                           placeholder="e.g. productivity, psychology"
                           style={{ flex: 1 }}
                         />
-                        <button className="btn-ghost" onClick={() => saveEntryTags(activeEntry)}>
-                          Save tags
+                        <button className="btn-ghost" onClick={() => saveEntryMeta(activeEntry)}>
+                          Save changes
                         </button>
                       </div>
                     </div>
