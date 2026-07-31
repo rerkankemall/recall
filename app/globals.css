@@ -144,6 +144,15 @@ body { margin:0; }
   }
   .entry-delete:hover{ color:var(--rust); }
 
+  .summary-box{
+    border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
+    padding:16px; margin-bottom:16px; font-size:14px; line-height:1.6; color:var(--ink);
+  }
+  .summary-label{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint);
+    text-transform:uppercase; letter-spacing:.04em; margin-bottom:8px;
+  }
+
   .tag-chip-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; }
   .tag-chip{
     font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.02em;

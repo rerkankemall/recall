@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { getOrCreateSubscription, isEntitled, checkTrialWordLimit, recordWordUsage } from '@/lib/entitlement';
 
-// This route is the ONLY place ANTHROPIC_API_KEY is ever read. It runs on
-// the server, so the key never reaches the browser. The client (app/page.tsx)
-// calls this route instead of calling Anthropic directly.
+// This route (like /api/extract) is one of the only places ANTHROPIC_API_KEY
+// is read — it runs server-side only, so the key never reaches the browser.
 export async function POST(req: NextRequest) {
   const supabase = createServerSupabase();
   const { data: { user } } = await supabase.auth.getUser();
@@ -14,7 +13,7 @@ export async function POST(req: NextRequest) {
 
   const sub = await getOrCreateSubscription(user.id);
   if (!isEntitled(sub)) {
-    return NextResponse.json({ error: 'Your trial has ended. Subscribe to keep capturing new ideas.' }, { status: 403 });
+    return NextResponse.json({ error: 'Your trial has ended. Subscribe to keep summarizing.' }, { status: 403 });
   }
 
   const { title, type, content } = await req.json();
@@ -37,9 +36,9 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
-        max_tokens: 1000,
+        max_tokens: 500,
         system:
-          "You extract the key ideas worth remembering from a piece of text the user read, and suggest topic tags for it. Return ONLY a JSON object of the shape {\"ideas\": [...], \"tags\": [...]} — \"ideas\" is 3-6 short strings, each a single self-contained idea or fact, written so it stands alone (no 'the article says'); \"tags\" is 1-3 short lowercase single-or-two-word topic tags (e.g. \"productivity\", \"machine learning\") describing the subject matter, not the source type. No markdown, no preamble, no code fences — raw JSON object only.",
+          'You write a concise summary of a piece of text the user read — 3-5 sentences, plain prose, no markdown, no bullet points, no preamble like "This text discusses...". Just the summary itself.',
         messages: [
           {
             role: 'user',
@@ -56,29 +55,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg }, { status: 502 });
     }
 
-    const raw = (data.content || []).map((b: any) => b.text || '').join('\n');
-    const clean = raw.replace(/```json|```/g, '').trim();
-
-    let parsed: { ideas?: unknown; tags?: unknown };
-    try {
-      parsed = JSON.parse(clean);
-    } catch {
-      const match = clean.match(/\{[\s\S]*\}/);
-      if (!match) throw new Error('Model did not return a parseable response');
-      parsed = JSON.parse(match[0]);
-    }
-
-    const ideas = Array.isArray(parsed.ideas) ? parsed.ideas : [];
-    const tags = Array.isArray(parsed.tags) ? parsed.tags : [];
-
-    if (ideas.length === 0) {
-      return NextResponse.json({ error: 'No ideas extracted' }, { status: 502 });
+    const summary = (data.content || []).map((b: any) => b.text || '').join('\n').trim();
+    if (!summary) {
+      return NextResponse.json({ error: 'No summary generated' }, { status: 502 });
     }
 
     await recordWordUsage(user.id, sub, wordCount);
 
-    return NextResponse.json({ ideas: ideas.map(String), tags: tags.map(String) });
+    return NextResponse.json({ summary });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Extraction failed' }, { status: 500 });
+    return NextResponse.json({ error: err.message || 'Summarization failed' }, { status: 500 });
   }
 }

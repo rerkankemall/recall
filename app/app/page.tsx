@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 
-type Entry = { id: string; title: string; type: string; created_at: string; tags: string[] };
+type Entry = { id: string; title: string; type: string; created_at: string; tags: string[]; summary: string | null };
 type Idea = {
   id: string;
   entry_id: string;
@@ -35,6 +35,8 @@ export default function Home() {
   const [tagsInput, setTagsInput] = useState('');
   const [drafts, setDrafts] = useState<string[]>([]);
   const [status, setStatus] = useState<{ kind: 'idle' | 'loading' | 'error'; msg?: string }>({ kind: 'idle' });
+  const [summary, setSummary] = useState('');
+  const [summarizing, setSummarizing] = useState(false);
 
   const [reviewQueue, setReviewQueue] = useState<Idea[]>([]);
   const [reviewIdx, setReviewIdx] = useState(0);
@@ -198,10 +200,33 @@ export default function Home() {
     }
   }
 
+  async function summarizeContent() {
+    if (!content.trim()) {
+      alert('Add a bit of text first.');
+      return;
+    }
+    setSummarizing(true);
+    try {
+      const res = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, type, content }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Summarization failed');
+      setSummary(data.summary);
+      await loadSubscription();
+    } catch (e: any) {
+      alert("Couldn't summarize: " + e.message);
+    } finally {
+      setSummarizing(false);
+    }
+  }
+
   async function saveEntry() {
     const valid = drafts.filter((d) => d.trim());
-    if (valid.length === 0) {
-      alert('Add at least one idea before saving.');
+    if (valid.length === 0 && !summary.trim()) {
+      alert('Add at least one idea, or generate a summary, before saving.');
       return;
     }
     const tags = tagsInput
@@ -211,7 +236,7 @@ export default function Home() {
     const res = await fetch('/api/ideas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title || 'Untitled', type, ideas: valid, tags }),
+      body: JSON.stringify({ title: title || 'Untitled', type, ideas: valid, tags, summary }),
     });
     if (!res.ok) {
       const data = await res.json();
@@ -222,6 +247,7 @@ export default function Home() {
     setContent('');
     setTagsInput('');
     setDrafts([]);
+    setSummary('');
     setStatus({ kind: 'idle' });
     await loadData();
     setTab('library');
@@ -275,8 +301,9 @@ export default function Home() {
     const lines: string[] = [`# Recall export`, `Exported ${new Date().toLocaleString()}`, ''];
     entries.forEach((entry) => {
       const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
-      if (entryIdeas.length === 0) return;
+      if (entryIdeas.length === 0 && !entry.summary) return;
       lines.push(`## ${entry.title} (${entry.type})`, '');
+      if (entry.summary) lines.push(`_${entry.summary}_`, '');
       entryIdeas.forEach((idea) => lines.push(`- ${idea.text}`));
       lines.push('');
     });
@@ -291,6 +318,7 @@ export default function Home() {
       `${entry.type} · ${new Date(entry.created_at).toLocaleDateString()}`,
       '',
     ];
+    if (entry.summary) lines.push(`_${entry.summary}_`, '');
     entryIdeas.forEach((idea) => lines.push(`- ${idea.text}`));
     const safeName = entry.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'entry';
     downloadMarkdown(`${safeName}.md`, lines);
@@ -445,33 +473,48 @@ export default function Home() {
             <textarea value={content} onChange={(e) => setContent(e.target.value)} />
             <div className="hint">Recall reads this and pulls out the ideas worth remembering.</div>
           </div>
-          <button className="btn" onClick={extractIdeas} disabled={status.kind === 'loading'}>
-            Extract ideas →
-          </button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button className="btn" onClick={extractIdeas} disabled={status.kind === 'loading'}>
+              Extract ideas →
+            </button>
+            <button className="btn-ghost" onClick={summarizeContent} disabled={summarizing}>
+              {summarizing ? 'Summarizing…' : 'Summarize'}
+            </button>
+          </div>
           {status.kind !== 'idle' && (
             <div className="extract-status">
               {status.kind === 'loading' ? 'Reading it over…' : `Couldn't auto-extract (${status.msg}). Add ideas below.`}
             </div>
           )}
 
-          {drafts.length > 0 && (
+          {(drafts.length > 0 || summary) && (
             <div style={{ marginTop: 22 }}>
-              <label>Ideas to remember</label>
-              {drafts.map((d, i) => (
-                <div key={i} className="idea-draft">
-                  <textarea
-                    value={d}
-                    onChange={(e) => {
-                      const copy = [...drafts];
-                      copy[i] = e.target.value;
-                      setDrafts(copy);
-                    }}
-                  />
-                  <button className="remove" onClick={() => setDrafts(drafts.filter((_, idx) => idx !== i))}>
-                    ×
-                  </button>
+              {summary && (
+                <div className="field">
+                  <label>Summary</label>
+                  <textarea value={summary} onChange={(e) => setSummary(e.target.value)} style={{ minHeight: 80 }} />
                 </div>
-              ))}
+              )}
+              {drafts.length > 0 && (
+                <>
+                  <label>Ideas to remember</label>
+                  {drafts.map((d, i) => (
+                    <div key={i} className="idea-draft">
+                      <textarea
+                        value={d}
+                        onChange={(e) => {
+                          const copy = [...drafts];
+                          copy[i] = e.target.value;
+                          setDrafts(copy);
+                        }}
+                      />
+                      <button className="remove" onClick={() => setDrafts(drafts.filter((_, idx) => idx !== i))}>
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
               <div className="field" style={{ marginTop: 14 }}>
                 <label>Tags (optional, comma separated)</label>
                 <input
@@ -486,7 +529,13 @@ export default function Home() {
                 <button className="btn" onClick={saveEntry}>
                   Save to library
                 </button>
-                <button className="btn-ghost" onClick={() => setDrafts([])}>
+                <button
+                  className="btn-ghost"
+                  onClick={() => {
+                    setDrafts([]);
+                    setSummary('');
+                  }}
+                >
                   Discard
                 </button>
               </div>
@@ -586,6 +635,12 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
+                    {activeEntry.summary && (
+                      <div className="summary-box">
+                        <div className="summary-label">Summary</div>
+                        {activeEntry.summary}
+                      </div>
+                    )}
                     <div className="field" style={{ marginBottom: 16 }}>
                       <label>Tags</label>
                       <div style={{ display: 'flex', gap: 8 }}>
@@ -601,7 +656,7 @@ export default function Home() {
                         </button>
                       </div>
                     </div>
-                    {entryIdeas.length > 0 && (
+                    {(entryIdeas.length > 0 || activeEntry.summary) && (
                       <div className="library-toolbar">
                         <button className="btn-ghost" onClick={() => exportEntry(activeEntry)}>
                           {selected.size > 0 ? `Export selected (${selected.size})` : 'Export this file'}
@@ -614,10 +669,12 @@ export default function Home() {
                       </div>
                     )}
                     {entryIdeas.length === 0 ? (
-                      <div className="empty">
-                        <div className="empty-mark">This file is empty</div>
-                        <div className="empty-sub">Every idea in it has been deleted.</div>
-                      </div>
+                      activeEntry.summary ? null : (
+                        <div className="empty">
+                          <div className="empty-mark">This file is empty</div>
+                          <div className="empty-sub">Every idea in it has been deleted.</div>
+                        </div>
+                      )
                     ) : (
                       entryIdeas.map((idea) => {
                         const overdue = new Date(idea.due_date) <= new Date();
@@ -693,7 +750,7 @@ export default function Home() {
                     const query = search.trim().toLowerCase();
                     const visibleEntries = entries.filter((entry) => {
                       const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
-                      if (entryIdeas.length === 0) return false;
+                      if (entryIdeas.length === 0 && !entry.summary) return false;
                       if (activeTag && !(entry.tags || []).includes(activeTag)) return false;
                       return (
                         !query ||

@@ -36,9 +36,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Your trial has ended. Subscribe to keep saving new ideas.' }, { status: 403 });
   }
 
-  const { title, type, ideas, tags } = await req.json();
-  if (!Array.isArray(ideas) || ideas.length === 0) {
-    return NextResponse.json({ error: 'No ideas to save' }, { status: 400 });
+  const { title, type, ideas, tags, summary } = await req.json();
+  const validIdeas = Array.isArray(ideas) ? ideas.filter((t: string) => t && t.trim()) : [];
+  const cleanSummary = typeof summary === 'string' && summary.trim() ? summary.trim() : null;
+
+  if (validIdeas.length === 0 && !cleanSummary) {
+    return NextResponse.json({ error: 'Add at least one idea or a summary to save' }, { status: 400 });
   }
 
   const cleanTags = Array.isArray(tags)
@@ -47,24 +50,21 @@ export async function POST(req: NextRequest) {
 
   const { data: entry, error: entryErr } = await supabase
     .from('entries')
-    .insert({ title: title || 'Untitled', type: type || 'Note', user_id: user.id, tags: cleanTags })
+    .insert({ title: title || 'Untitled', type: type || 'Note', user_id: user.id, tags: cleanTags, summary: cleanSummary })
     .select()
     .single();
 
   if (entryErr) return NextResponse.json({ error: entryErr.message }, { status: 500 });
 
-  const rows = ideas
-    .filter((t: string) => t && t.trim())
-    .map((text: string) => ({
-      entry_id: entry.id,
-      user_id: user.id,
-      text: text.trim(),
-    }));
+  const rows = validIdeas.map((text: string) => ({
+    entry_id: entry.id,
+    user_id: user.id,
+    text: text.trim(),
+  }));
 
-  const { data: savedIdeas, error: ideasErr } = await supabase
-    .from('ideas')
-    .insert(rows)
-    .select();
+  const { data: savedIdeas, error: ideasErr } = rows.length > 0
+    ? await supabase.from('ideas').insert(rows).select()
+    : { data: [], error: null };
 
   if (ideasErr) return NextResponse.json({ error: ideasErr.message }, { status: 500 });
 

@@ -43,3 +43,22 @@ export function isEntitled(sub: Subscription): boolean {
   }
   return false;
 }
+
+// Returns an error message if this word count would exceed the trial budget,
+// or null if it's fine to proceed (always fine for non-trialing users).
+export function checkTrialWordLimit(sub: Subscription, wordCount: number): string | null {
+  if (sub.status !== 'trialing') return null;
+  const remaining = TRIAL_WORD_LIMIT - sub.trial_words_used;
+  if (wordCount > remaining) {
+    return `This would use ${wordCount} words, but you only have ${Math.max(0, remaining)} words left in your trial's ${TRIAL_WORD_LIMIT}-word limit. Subscribe for unlimited use.`;
+  }
+  return null;
+}
+
+export async function recordWordUsage(userId: string, sub: Subscription, wordCount: number) {
+  if (sub.status !== 'trialing') return;
+  await createAdminSupabase()
+    .from('subscriptions')
+    .update({ trial_words_used: sub.trial_words_used + wordCount })
+    .eq('user_id', userId);
+}
