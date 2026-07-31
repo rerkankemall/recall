@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Recall',
+  title: 'Afterword',
   description: 'Remember what you read.',
   manifest: '/manifest.json',
   icons: {
@@ -10,7 +10,7 @@ export const metadata = {
   },
   appleWebApp: {
     capable: true,
-    title: 'Recall',
+    title: 'Afterword',
     statusBarStyle: 'black-translucent',
   },
   themeColor: '#14171c',

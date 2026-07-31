@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     if (!email) continue;
 
     await getResend().emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'Recall <onboarding@resend.dev>',
+      from: process.env.RESEND_FROM_EMAIL || 'Afterword <onboarding@resend.dev>',
       to: email,
       subject: `${ideas.length} idea${ideas.length === 1 ? '' : 's'} due for review`,
       html: digestEmailHtml(ideas, appUrl),

@@ -305,7 +305,7 @@ export default function Home() {
   }
 
   function exportLibrary() {
-    const lines: string[] = [`# Recall export`, `Exported ${new Date().toLocaleString()}`, ''];
+    const lines: string[] = [`# Afterword export`, `Exported ${new Date().toLocaleString()}`, ''];
     entries.forEach((entry) => {
       const entryIdeas = ideas.filter((i) => i.entry_id === entry.id);
       if (entryIdeas.length === 0 && !entry.summary) return;
@@ -314,7 +314,7 @@ export default function Home() {
       entryIdeas.forEach((idea) => lines.push(`- ${idea.text}`));
       lines.push('');
     });
-    downloadMarkdown(`recall-export-${new Date().toISOString().slice(0, 10)}.md`, lines);
+    downloadMarkdown(`afterword-export-${new Date().toISOString().slice(0, 10)}.md`, lines);
   }
 
   function exportEntry(entry: Entry) {
@@ -375,7 +375,7 @@ export default function Home() {
     <div className="shell">
       <div className="masthead">
         <div className="brand">
-          <span className="brand-mark">Recall</span>
+          <span className="brand-mark">Afterword</span>
           <span className="brand-tag">READING MEMORY LOG</span>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -447,9 +447,9 @@ export default function Home() {
         <section className="view active">
           {dataLoaded && entries.length === 0 && (
             <div className="onboarding-card">
-              <div className="onboarding-title">Welcome to Recall</div>
+              <div className="onboarding-title">Welcome to Afterword</div>
               <div className="onboarding-body">
-                Paste something you read below, click "Extract ideas," and Recall pulls out
+                Paste something you read below, click "Extract ideas," and Afterword pulls out
                 the key points worth remembering. Save them, and they'll come back to you
                 later in the Review tab on a spaced schedule — so you actually remember them,
                 instead of forgetting like most highlights do.
@@ -478,7 +478,7 @@ export default function Home() {
           <div className="field">
             <label>Paste what you read, or tell it in your own words</label>
             <textarea value={content} onChange={(e) => setContent(e.target.value)} />
-            <div className="hint">Recall reads this and pulls out the ideas worth remembering.</div>
+            <div className="hint">Afterword reads this and pulls out the ideas worth remembering.</div>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn" onClick={extractIdeas} disabled={status.kind === 'loading'}>

@@ -1,6 +1,6 @@
 {
-  "name": "Recall",
-  "short_name": "Recall",
+  "name": "Afterword",
+  "short_name": "Afterword",
   "description": "Capture ideas from what you read, and remember them with spaced repetition.",
   "start_url": "/",
   "display": "standalone",

@@ -104,7 +104,7 @@ export default function SettingsPage() {
     <div className="shell">
       <div className="masthead">
         <div className="brand">
-          <span className="brand-mark">Recall</span>
+          <span className="brand-mark">Afterword</span>
           <span className="brand-tag">SETTINGS</span>
         </div>
         <button className="btn-ghost" onClick={() => router.push('/app')}>
@@ -117,7 +117,7 @@ export default function SettingsPage() {
           <div className="field">
             <label>Subscription</label>
             <div className="hint" style={{ marginBottom: 10 }}>
-              Your Recall subscription is active.
+              Your Afterword subscription is active.
             </div>
             <button className="btn-ghost" onClick={manageSubscription} disabled={openingPortal}>
               {openingPortal ? 'Opening…' : 'Manage subscription'}

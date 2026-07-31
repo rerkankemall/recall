@@ -1,6 +1,6 @@
-# Recall — real app scaffold
+# Afterword — real app scaffold
 
-This is the "own its own page" version of the Recall prototype: a Next.js app
+This is the "own its own page" version of the Afterword (formerly Recall) prototype: a Next.js app
 with a real database, real auth, and a backend that keeps your Anthropic API
 key private. It's a starting point, not a finished product — expect to tweak
 things as you go, ideally with Claude Code doing the heavy lifting from here.

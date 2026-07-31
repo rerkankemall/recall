@@ -21,7 +21,7 @@ export default function LoginPage() {
 
   return (
     <div style={{ maxWidth: 380, margin: '80px auto', padding: '0 20px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Sign in to Recall</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Sign in to Afterword</h1>
       {sent ? (
         <p>Check your email — we sent a sign-in link to {email}.</p>
       ) : (

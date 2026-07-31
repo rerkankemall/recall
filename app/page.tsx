@@ -21,12 +21,12 @@ export default function LandingPage() {
     <div className="landing-shell">
       <div className="landing-hero">
         <div className="brand">
-          <span className="brand-mark">Recall</span>
+          <span className="brand-mark">Afterword</span>
           <span className="brand-tag">READING MEMORY LOG</span>
         </div>
-        <h1 className="landing-headline">You forget most of what you read. Recall fixes that.</h1>
+        <h1 className="landing-headline">You forget most of what you read. Afterword fixes that.</h1>
         <p className="landing-sub">
-          Paste in what you're reading — a book, an article, a paper — and Recall pulls out
+          Paste in what you're reading — a book, an article, a paper — and Afterword pulls out
           the ideas worth remembering. Then it brings them back to you on a spaced schedule,
           right when you're about to forget, so they actually stick.
         </p>
@@ -40,7 +40,7 @@ export default function LandingPage() {
         <div className="landing-feature">
           <div className="landing-feature-title">Capture</div>
           <div className="landing-feature-body">
-            Paste in text from anything you're reading. Recall reads it and extracts the ideas
+            Paste in text from anything you're reading. Afterword reads it and extracts the ideas
             actually worth holding onto.
           </div>
         </div>
