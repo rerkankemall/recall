@@ -3,6 +3,10 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 import { getOrCreateSubscription, isEntitled, checkWordLimit, recordWordUsage, checkYoutubeLimit, recordYoutubeUsage } from '@/lib/entitlement';
 import { isYoutubeUrl, fetchYoutubeTranscript } from '@/lib/youtubeTranscript';
 
+// Long YouTube videos can take a while to transcribe (see youtubeTranscript.ts's
+// polling), so this needs more than the default 10s function timeout.
+export const maxDuration = 60;
+
 // This route is the ONLY place ANTHROPIC_API_KEY is ever read. It runs on
 // the server, so the key never reaches the browser. The client (app/page.tsx)
 // calls this route instead of calling Anthropic directly.
