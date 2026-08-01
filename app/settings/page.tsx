@@ -37,7 +37,16 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [subscription, setSubscription] = useState<{ status: string } | null>(null);
+  const [subscription, setSubscription] = useState<{
+    status: string;
+    trial_words_used: number;
+    trial_word_limit: number;
+    trial_youtube_used: number;
+    trial_youtube_limit: number;
+    sub_words_used: number;
+    sub_word_limit: number;
+    sub_word_cap_applies: boolean;
+  } | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
   const [customFrequency, setCustomFrequency] = useState(false);
 
@@ -113,6 +122,27 @@ export default function SettingsPage() {
       </div>
 
       <section className="view active">
+        {subscription?.status === 'trialing' && (
+          <div className="field">
+            <label>Usage</label>
+            <div className="hint">
+              {subscription.trial_words_used.toLocaleString()} / {subscription.trial_word_limit.toLocaleString()} words used in your trial.
+              <br />
+              {subscription.trial_youtube_used} / {subscription.trial_youtube_limit} YouTube videos used in your trial.
+            </div>
+          </div>
+        )}
+        {subscription?.status === 'active' && (
+          <div className="field">
+            <label>Usage</label>
+            <div className="hint">
+              {subscription.sub_word_cap_applies
+                ? `${subscription.sub_words_used.toLocaleString()} / ${subscription.sub_word_limit.toLocaleString()} words used this billing period. Resets when your subscription renews.`
+                : 'Unlimited usage on this account.'}
+            </div>
+          </div>
+        )}
+
         {subscription?.status === 'active' && (
           <div className="field">
             <label>Subscription</label>

@@ -1,3 +1,5 @@
+import { alertOncePerDay } from './systemAlerts';
+
 const YOUTUBE_URL_RE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]+/i;
 
 const POLL_INTERVAL_MS = 2000;
@@ -7,6 +9,19 @@ const TIMEOUT_MESSAGE =
 
 export function isYoutubeUrl(text: string): boolean {
   return YOUTUBE_URL_RE.test(text.trim());
+}
+
+// Supadata returns { error: "limit-exceeded", ... } once the shared monthly
+// transcript quota runs out — every YouTube capture will fail until it resets
+// or the plan is upgraded, so this is worth telling the owner about promptly.
+async function notifyIfQuotaExceeded(body: any) {
+  if (body?.error === 'limit-exceeded') {
+    await alertOncePerDay(
+      'supadata_quota_exceeded',
+      'Afterword: Supadata YouTube transcript quota exceeded',
+      "Your Supadata account has run out of transcript credits for this billing cycle. YouTube captures will fail for all users until it resets or you upgrade your Supadata plan."
+    );
+  }
 }
 
 function extractContent(data: any): string {
@@ -32,6 +47,8 @@ async function pollTranscriptJob(jobId: string, apiKey: string): Promise<string>
     });
 
     if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      await notifyIfQuotaExceeded(body);
       throw new Error(`Could not check this video's transcript status (${res.status}).`);
     }
 
@@ -72,6 +89,7 @@ export async function fetchYoutubeTranscript(url: string): Promise<string> {
 
   if (!res.ok) {
     const body = await res.json().catch(() => null);
+    await notifyIfQuotaExceeded(body);
     throw new Error(body?.message || `Could not fetch this video's transcript (${res.status}).`);
   }
 

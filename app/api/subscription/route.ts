@@ -17,6 +17,9 @@ export async function GET() {
     trial_word_limit: TRIAL_WORD_LIMIT,
     sub_words_used: sub.status === 'active' && sub.current_period_end && sub.sub_words_period_end === sub.current_period_end ? sub.sub_words_used : 0,
     sub_word_limit: SUBSCRIBER_WORD_LIMIT,
+    // True only for a real Stripe-billed subscription (current_period_end is
+    // set by the webhook) — an account activated manually has no period cap.
+    sub_word_cap_applies: sub.status === 'active' && !!sub.current_period_end,
     trial_youtube_used: sub.trial_youtube_used,
     trial_youtube_limit: TRIAL_YOUTUBE_LIMIT,
   });
