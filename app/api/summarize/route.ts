@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
-import { getOrCreateSubscription, isEntitled, checkWordLimit, recordWordUsage } from '@/lib/entitlement';
+import { getOrCreateSubscription, isEntitled, checkWordLimit, recordWordUsage, checkYoutubeLimit, recordYoutubeUsage } from '@/lib/entitlement';
 import { isYoutubeUrl, fetchYoutubeTranscript } from '@/lib/youtubeTranscript';
 
 // This route (like /api/extract) is one of the only places ANTHROPIC_API_KEY
@@ -25,8 +25,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (isYoutubeUrl(content)) {
+    const youtubeLimitError = checkYoutubeLimit(sub);
+    if (youtubeLimitError) {
+      return NextResponse.json({ error: youtubeLimitError }, { status: 403 });
+    }
     try {
       content = await fetchYoutubeTranscript(content);
+      await recordYoutubeUsage(user.id, sub);
     } catch (err: any) {
       return NextResponse.json({ error: err.message || 'Could not fetch this video\'s transcript' }, { status: 502 });
     }

@@ -3,6 +3,7 @@ import { createAdminSupabase } from './supabaseServer';
 const TRIAL_DAYS = 14;
 export const TRIAL_WORD_LIMIT = 10000;
 export const SUBSCRIBER_WORD_LIMIT = 500000;
+export const TRIAL_YOUTUBE_LIMIT = 5;
 
 export type Subscription = {
   user_id: string;
@@ -12,6 +13,7 @@ export type Subscription = {
   trial_words_used: number;
   sub_words_used: number;
   sub_words_period_end: string | null;
+  trial_youtube_used: number;
 };
 
 // Fetches the user's subscription row, creating a fresh 14-day trial the
@@ -70,6 +72,26 @@ export function checkWordLimit(sub: Subscription, wordCount: number): string | n
   }
 
   return null;
+}
+
+// Returns an error message if a trialing user has used up their YouTube video
+// allowance, or null if it's fine to proceed. Only trialing users are capped —
+// this protects the shared Supadata transcript quota from one trial account
+// burning through it before subscribing.
+export function checkYoutubeLimit(sub: Subscription): string | null {
+  if (sub.status !== 'trialing') return null;
+  if (sub.trial_youtube_used >= TRIAL_YOUTUBE_LIMIT) {
+    return `You've used all ${TRIAL_YOUTUBE_LIMIT} YouTube videos included in your trial. Subscribe for unlimited video support.`;
+  }
+  return null;
+}
+
+export async function recordYoutubeUsage(userId: string, sub: Subscription) {
+  if (sub.status !== 'trialing') return;
+  await createAdminSupabase()
+    .from('subscriptions')
+    .update({ trial_youtube_used: sub.trial_youtube_used + 1 })
+    .eq('user_id', userId);
 }
 
 export async function recordWordUsage(userId: string, sub: Subscription, wordCount: number) {
