@@ -32,6 +32,19 @@ export function trialEndingEmailHtml(daysLeft: number, appUrl: string) {
   `;
 }
 
+export function weeklyRecapEmailHtml(reviewedThisWeek: number, streak: number, appUrl: string) {
+  const streakLine =
+    streak > 1 ? `<p>You're on a ${streak}-day streak.</p>` : streak === 1 ? `<p>You reviewed today — keep it going.</p>` : '';
+  return `
+    <div style="font-family:sans-serif; max-width:480px; margin:0 auto;">
+      <h2>Your week in Afterword</h2>
+      <p>You reviewed ${reviewedThisWeek} idea${reviewedThisWeek === 1 ? '' : 's'} this week.</p>
+      ${streakLine}
+      <p><a href="${appUrl}/app" style="display:inline-block; padding:10px 18px; background:#e8a649; color:#14171c; text-decoration:none; border-radius:4px;">Review now</a></p>
+    </div>
+  `;
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, '&amp;')
