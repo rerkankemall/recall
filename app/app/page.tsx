@@ -110,6 +110,17 @@ export default function Home() {
     });
   }, []);
 
+  // ---- pre-fill Capture from the "Send to Afterword" bookmarklet ----
+  useEffect(() => {
+    if (checkingAuth) return;
+    const captured = new URLSearchParams(window.location.search).get('capture');
+    if (captured) {
+      setContent(captured);
+      setTab('capture');
+      window.history.replaceState({}, '', '/app');
+    }
+  }, [checkingAuth]);
+
   // ---- load library ----
   const [dataLoaded, setDataLoaded] = useState(false);
   const loadData = useCallback(async () => {

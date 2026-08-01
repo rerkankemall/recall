@@ -49,6 +49,11 @@ export default function SettingsPage() {
   } | null>(null);
   const [openingPortal, setOpeningPortal] = useState(false);
   const [customFrequency, setCustomFrequency] = useState(false);
+  const [origin, setOrigin] = useState('');
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -109,6 +114,10 @@ export default function SettingsPage() {
 
   if (checkingAuth || !settings) return null;
 
+  const bookmarklet = origin
+    ? `javascript:(function(){var s=window.getSelection().toString();if(!s){alert('Select some text on the page first, then click this bookmark.');}else{window.open('${origin}/app?capture='+encodeURIComponent(s),'_blank');}})();`
+    : '';
+
   return (
     <div className="shell">
       <div className="masthead">
@@ -140,6 +149,23 @@ export default function SettingsPage() {
                 ? `${subscription.sub_words_used.toLocaleString()} / ${subscription.sub_word_limit.toLocaleString()} words used this billing period. Resets when your subscription renews.`
                 : 'Unlimited usage on this account.'}
             </div>
+          </div>
+        )}
+
+        {origin && (
+          <div className="field">
+            <label>Capture from anywhere</label>
+            <div className="hint" style={{ marginBottom: 10 }}>
+              Drag this to your bookmarks bar (don't click it here). Then on any webpage, select some text and click it to send that text straight into Capture.
+            </div>
+            <a
+              href={bookmarklet}
+              className="btn-ghost"
+              style={{ display: 'inline-block', textDecoration: 'none' }}
+              onClick={(e) => e.preventDefault()}
+            >
+              Send to Afterword
+            </a>
           </div>
         )}
 
