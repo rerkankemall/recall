@@ -21,6 +21,17 @@ export function digestEmailHtml(ideas: { text: string }[], appUrl: string) {
   `;
 }
 
+export function trialEndingEmailHtml(daysLeft: number, appUrl: string) {
+  const when = daysLeft <= 1 ? 'tomorrow' : `in ${daysLeft} days`;
+  return `
+    <div style="font-family:sans-serif; max-width:480px; margin:0 auto;">
+      <h2>Your Afterword trial ends ${when}</h2>
+      <p>Once it ends, Capture and Review pause until you subscribe — your library stays put, you just won't be able to add or review new ideas.</p>
+      <p><a href="${appUrl}/app" style="display:inline-block; padding:10px 18px; background:#e8a649; color:#14171c; text-decoration:none; border-radius:4px;">Subscribe now</a></p>
+    </div>
+  `;
+}
+
 function escapeHtml(s: string) {
   return s
     .replace(/&/g, '&amp;')
