@@ -193,7 +193,7 @@ export default function SettingsPage() {
             <option value="off">Off</option>
           </select>
           <div className="hint">
-            Only sends when you have ideas due for review.
+            Get an email when ideas are waiting for review, so it doesn't slip your mind. Only sends when something's actually due.
           </div>
         </div>
 

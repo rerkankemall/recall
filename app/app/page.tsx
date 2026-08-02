@@ -621,6 +621,9 @@ export default function Home() {
                             </button>
                           ))}
                         </div>
+                        <div className="hint" style={{ marginTop: 10 }}>
+                          Be honest — it decides when this comes back. Forgot it or Fuzzy brings it back sooner; Remembered it or Nailed it space it out further.
+                        </div>
                       </>
                     )}
                   </div>
