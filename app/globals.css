@@ -228,6 +228,11 @@ body { margin:0; }
 
   .review-progress{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-faint); margin-bottom:10px; }
 
+  .quiz-option{ text-align:left; }
+  .quiz-option[data-state="correct"]{ border-color:#7fb08a; color:#7fb08a; }
+  .quiz-option[data-state="wrong"]{ border-color:var(--rust); color:var(--rust); }
+  .quiz-option[data-state="dim"]{ opacity:.5; }
+
   /* stats */
   .streak-hero{
     text-align:center; padding:30px 20px; border:1px solid var(--line); border-radius:var(--radius);

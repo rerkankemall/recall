@@ -13,6 +13,12 @@ type Idea = {
   reps: number;
   due_date: string;
 };
+type QuizQuestion = {
+  question: string;
+  options: string[];
+  answerIndex: number;
+  explanation: string;
+};
 
 const SAMPLE_TITLE = 'Atomic Habits, ch. 1';
 const SAMPLE_TYPE = 'Book';
@@ -37,6 +43,12 @@ export default function Home() {
   const [status, setStatus] = useState<{ kind: 'idle' | 'loading' | 'error'; msg?: string }>({ kind: 'idle' });
   const [summary, setSummary] = useState('');
   const [summarizing, setSummarizing] = useState(false);
+
+  const [quiz, setQuiz] = useState<QuizQuestion[] | null>(null);
+  const [quizzing, setQuizzing] = useState(false);
+  const [quizIdx, setQuizIdx] = useState(0);
+  const [quizSelected, setQuizSelected] = useState<number | null>(null);
+  const [quizScore, setQuizScore] = useState(0);
 
   const [reviewQueue, setReviewQueue] = useState<Idea[]>([]);
   const [reviewIdx, setReviewIdx] = useState(0);
@@ -239,6 +251,52 @@ export default function Home() {
     } finally {
       setSummarizing(false);
     }
+  }
+
+  async function startQuiz() {
+    if (!content.trim()) {
+      alert('Add a bit of text first.');
+      return;
+    }
+    setQuizzing(true);
+    try {
+      const res = await fetch('/api/quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, type, content }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Quiz generation failed');
+      setQuiz(data.questions);
+      setQuizIdx(0);
+      setQuizSelected(null);
+      setQuizScore(0);
+      await loadSubscription();
+    } catch (e: any) {
+      alert("Couldn't generate a quiz: " + e.message);
+    } finally {
+      setQuizzing(false);
+    }
+  }
+
+  function selectQuizOption(idx: number) {
+    if (quizSelected !== null || !quiz) return;
+    setQuizSelected(idx);
+    if (idx === quiz[quizIdx].answerIndex) {
+      setQuizScore((s) => s + 1);
+    }
+  }
+
+  function nextQuizQuestion() {
+    setQuizIdx((i) => i + 1);
+    setQuizSelected(null);
+  }
+
+  function closeQuiz() {
+    setQuiz(null);
+    setQuizIdx(0);
+    setQuizSelected(null);
+    setQuizScore(0);
   }
 
   async function saveEntry() {
@@ -498,10 +556,71 @@ export default function Home() {
             <button className="btn" onClick={summarizeContent} disabled={summarizing}>
               {summarizing ? 'Summarizing…' : 'Summarize'}
             </button>
+            <button className="btn-ghost" onClick={startQuiz} disabled={quizzing}>
+              {quizzing ? 'Writing quiz…' : 'Quiz me'}
+            </button>
           </div>
           {status.kind !== 'idle' && (
             <div className="extract-status">
               {status.kind === 'loading' ? 'Reading it over…' : `Couldn't auto-extract (${status.msg}). Add ideas below.`}
+            </div>
+          )}
+
+          {quiz && (
+            <div className="review-stage" style={{ marginTop: 22 }}>
+              {quizIdx >= quiz.length ? (
+                <>
+                  <div className="review-eyebrow">Quiz complete</div>
+                  <div className="review-prompt">
+                    You got {quizScore} / {quiz.length} right.
+                  </div>
+                  <button className="btn-ghost" style={{ marginTop: 14 }} onClick={closeQuiz}>
+                    Close quiz
+                  </button>
+                </>
+              ) : (
+                (() => {
+                  const q = quiz[quizIdx];
+                  return (
+                    <>
+                      <div className="review-progress">
+                        Question {quizIdx + 1} / {quiz.length}
+                      </div>
+                      <div className="review-prompt">{q.question}</div>
+                      <div className="rate-row" style={{ flexDirection: 'column' }}>
+                        {q.options.map((opt, i) => {
+                          let state: 'default' | 'correct' | 'wrong' | 'dim' = 'default';
+                          if (quizSelected !== null) {
+                            if (i === q.answerIndex) state = 'correct';
+                            else if (i === quizSelected) state = 'wrong';
+                            else state = 'dim';
+                          }
+                          return (
+                            <button
+                              key={i}
+                              className="rate-btn quiz-option"
+                              data-state={state}
+                              style={{ width: '100%', textAlign: 'left' }}
+                              onClick={() => selectQuizOption(i)}
+                              disabled={quizSelected !== null}
+                            >
+                              <span className="rk">{opt}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {quizSelected !== null && (
+                        <>
+                          <div className="hint" style={{ marginTop: 12 }}>{q.explanation}</div>
+                          <button className="btn" style={{ marginTop: 14 }} onClick={nextQuizQuestion}>
+                            {quizIdx + 1 >= quiz.length ? 'See results' : 'Next question →'}
+                          </button>
+                        </>
+                      )}
+                    </>
+                  );
+                })()
+              )}
             </div>
           )}
 
