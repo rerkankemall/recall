@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createAdminSupabase } from '@/lib/supabaseServer';
+import { alertOncePerDay } from '@/lib/systemAlerts';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-06-20' });
 
@@ -34,6 +35,13 @@ export async function POST(req: NextRequest) {
         status: 'active',
         current_period_end: currentPeriodEnd,
       });
+
+      const subscriberEmail = session.customer_details?.email || session.customer_email || 'unknown email';
+      await alertOncePerDay(
+        `new_subscriber_${userId}`,
+        'Afterword: New subscriber',
+        `${subscriberEmail} just subscribed to Afterword.`
+      );
     }
   }
 
