@@ -20,6 +20,14 @@ type QuizQuestion = {
   explanation: string;
 };
 
+// Mirrors lib/youtubeTranscript.ts's isYoutubeUrl — kept separate (not
+// imported) because that file pulls in server-only code (next/headers via
+// supabaseServer.ts) that can't be bundled into a client component.
+const YOUTUBE_URL_RE = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[\w-]+/i;
+function isYoutubeUrl(text: string): boolean {
+  return YOUTUBE_URL_RE.test(text.trim());
+}
+
 const SAMPLE_TITLE = 'Atomic Habits, ch. 1';
 const SAMPLE_TYPE = 'Book';
 const SAMPLE_CONTENT =
@@ -226,7 +234,9 @@ export default function Home() {
       await loadSubscription();
     } catch (e: any) {
       setStatus({ kind: 'error', msg: e.message });
-      setDrafts(['']);
+      if (!isYoutubeUrl(content)) {
+        setDrafts(['']);
+      }
     }
   }
 
@@ -562,7 +572,11 @@ export default function Home() {
           </div>
           {status.kind !== 'idle' && (
             <div className="extract-status">
-              {status.kind === 'loading' ? 'Reading it over…' : `Couldn't auto-extract (${status.msg}). Add ideas below.`}
+              {status.kind === 'loading'
+                ? 'Reading it over…'
+                : isYoutubeUrl(content)
+                ? `Couldn't extract ideas: ${status.msg}`
+                : `Couldn't auto-extract (${status.msg}). Add ideas below.`}
             </div>
           )}
 
