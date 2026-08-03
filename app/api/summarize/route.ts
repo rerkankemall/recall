@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No content provided' }, { status: 400 });
   }
 
-  if (isYoutubeUrl(content)) {
+  const isFromYoutube = isYoutubeUrl(content);
+  if (isFromYoutube) {
     const youtubeLimitError = checkYoutubeLimit(sub);
     if (youtubeLimitError) {
       return NextResponse.json({ error: youtubeLimitError }, { status: 403 });
@@ -44,7 +45,15 @@ export async function POST(req: NextRequest) {
   const wordCount = content.trim().split(/\s+/).filter(Boolean).length;
 
   const limitError = checkWordLimit(sub, wordCount);
-  if (limitError) return NextResponse.json({ error: limitError }, { status: 403 });
+  if (limitError) {
+    if (isFromYoutube && sub.status === 'trialing') {
+      return NextResponse.json(
+        { error: "This video is too long for your trial's word budget. Try a shorter video (under ~30 minutes), or subscribe for unlimited use." },
+        { status: 403 }
+      );
+    }
+    return NextResponse.json({ error: limitError }, { status: 403 });
+  }
 
   try {
     const anthropicRes = await fetch('https://api.anthropic.com/v1/messages', {

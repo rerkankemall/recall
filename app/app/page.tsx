@@ -537,9 +537,9 @@ export default function Home() {
               <label>Type</label>
               <select value={type} onChange={(e) => setType(e.target.value)}>
                 <option>Book</option>
+                <option>YouTube video</option>
                 <option>Article</option>
                 <option>Paper</option>
-                <option>Podcast</option>
                 <option>Note</option>
               </select>
             </div>

@@ -24,11 +24,51 @@ async function notifyIfQuotaExceeded(body: any) {
   }
 }
 
-function extractContent(data: any): string {
+// Song lyrics fed to "Extract ideas"/"Summarize"/"Quiz me" produce nonsense
+// (there are no "ideas" in a chorus), and reproducing full lyrics verbatim is
+// a real copyright risk unlike paraphrasing an article. So this checks with
+// Claude (cheap, tiny response) before handing the transcript back, and fails
+// open — a broken check should never block a legitimate capture.
+async function checkNotSong(content: string): Promise<void> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return;
+
+  let isSong = false;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 20,
+        system:
+          'Classify whether the given text is song lyrics/music being performed, as opposed to spoken informational content (a talk, lecture, interview, review, tutorial, etc). Respond with ONLY a JSON object {"isSong": true} or {"isSong": false} — no other text.',
+        messages: [{ role: 'user', content: content.slice(0, 4000) }],
+      }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    const raw = (data.content || []).map((b: any) => b.text || '').join('');
+    isSong = /"isSong"\s*:\s*true/i.test(raw);
+  } catch {
+    return;
+  }
+
+  if (isSong) {
+    throw new Error('This looks like a song — Afterword works best with content that has ideas to capture, like talks, lectures, or tutorials, not song lyrics.');
+  }
+}
+
+async function extractContent(data: any): Promise<string> {
   const content = typeof data.content === 'string' ? data.content.trim() : '';
   if (!content) {
     throw new Error("This video doesn't have a transcript available.");
   }
+  await checkNotSong(content);
   return content;
 }
 
