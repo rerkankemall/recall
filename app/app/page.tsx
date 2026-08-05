@@ -111,6 +111,7 @@ export default function Home() {
     entitled: boolean;
     trial_words_used: number;
     trial_word_limit: number;
+    is_new_account: boolean;
   } | null>(null);
 
   function toggleSelect(ideaId: string) {
@@ -159,7 +160,11 @@ export default function Home() {
   const loadSubscription = useCallback(async () => {
     const res = await fetch('/api/subscription');
     if (!res.ok) return;
-    setSubscription(await res.json());
+    const data = await res.json();
+    setSubscription(data);
+    if (data.is_new_account && typeof (window as any).rdt === 'function') {
+      (window as any).rdt('track', 'SignUp');
+    }
   }, []);
 
   useEffect(() => {

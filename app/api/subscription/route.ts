@@ -22,5 +22,6 @@ export async function GET() {
     sub_word_cap_applies: sub.status === 'active' && !!sub.current_period_end,
     trial_youtube_used: sub.trial_youtube_used,
     trial_youtube_limit: TRIAL_YOUTUBE_LIMIT,
+    is_new_account: sub.isNewAccount,
   });
 }

@@ -20,7 +20,7 @@ export type Subscription = {
 // first time they're seen. Uses the admin client since subscriptions has
 // no user-facing insert policy (it's meant to be managed by the Stripe
 // webhook and this trial bootstrap only).
-export async function getOrCreateSubscription(userId: string): Promise<Subscription> {
+export async function getOrCreateSubscription(userId: string): Promise<Subscription & { isNewAccount: boolean }> {
   const admin = createAdminSupabase();
   const { data: existing } = await admin
     .from('subscriptions')
@@ -28,7 +28,7 @@ export async function getOrCreateSubscription(userId: string): Promise<Subscript
     .eq('user_id', userId)
     .maybeSingle();
 
-  if (existing) return existing;
+  if (existing) return { ...existing, isNewAccount: false };
 
   const trialEndsAt = new Date(Date.now() + TRIAL_DAYS * 24 * 60 * 60 * 1000).toISOString();
   const { data: created, error } = await admin
@@ -38,7 +38,7 @@ export async function getOrCreateSubscription(userId: string): Promise<Subscript
     .single();
 
   if (error) throw error;
-  return created;
+  return { ...created, isNewAccount: true };
 }
 
 export function isEntitled(sub: Subscription): boolean {
