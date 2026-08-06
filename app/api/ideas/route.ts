@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { getOrCreateSubscription, isEntitled } from '@/lib/entitlement';
+import { resolveCoverUrl } from '@/lib/bookCover';
 
 // GET /api/ideas -> { entries, ideas } for the signed-in user (RLS scopes this)
 export async function GET() {
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Your trial has ended. Subscribe to keep saving new ideas.' }, { status: 403 });
   }
 
-  const { title, type, ideas, tags, summary } = await req.json();
+  const { title, type, ideas, tags, summary, content } = await req.json();
   const validIdeas = Array.isArray(ideas) ? ideas.filter((t: string) => t && t.trim()) : [];
   const cleanSummary = typeof summary === 'string' && summary.trim() ? summary.trim() : null;
 
@@ -48,9 +49,18 @@ export async function POST(req: NextRequest) {
     ? Array.from(new Set(tags.map((t: string) => t.trim().toLowerCase()).filter(Boolean)))
     : [];
 
+  const coverUrl = await resolveCoverUrl(typeof content === 'string' ? content : '', type || 'Note', title || 'Untitled');
+
   const { data: entry, error: entryErr } = await supabase
     .from('entries')
-    .insert({ title: title || 'Untitled', type: type || 'Note', user_id: user.id, tags: cleanTags, summary: cleanSummary })
+    .insert({
+      title: title || 'Untitled',
+      type: type || 'Note',
+      user_id: user.id,
+      tags: cleanTags,
+      summary: cleanSummary,
+      cover_url: coverUrl,
+    })
     .select()
     .single();
 

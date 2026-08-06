@@ -172,7 +172,15 @@ body { margin:0; }
   .file-row:hover{ border-color:var(--amber); }
   .file-row .entry-title{ font-size:15px; margin-bottom:4px; }
   .file-row .entry-meta{ white-space:normal; }
-  .file-info{ min-width:0; }
+  .file-info{ min-width:0; flex:1; }
+  .file-cover{
+    width:44px; height:44px; border-radius:6px; object-fit:cover;
+    flex-shrink:0; background:var(--surface-raised); border:1px solid var(--line);
+  }
+  .file-cover-large{
+    width:96px; height:96px; border-radius:8px; object-fit:cover;
+    border:1px solid var(--line); margin-bottom:14px;
+  }
 
   .card{
     border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);

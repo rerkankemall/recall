@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { getOrCreateSubscription, isEntitled } from '@/lib/entitlement';
 import { parseKindleClippings, parseReadwiseCSV, ParsedBook } from '@/lib/importParsers';
+import { resolveCoverUrl } from '@/lib/bookCover';
+
+// Cover lookups for a large import (many unique books) run in parallel after
+// the import itself finishes — see the bottom of this handler.
+export const maxDuration = 60;
 
 // POST /api/import  { format: 'kindle' | 'readwise', content: string }
 export async function POST(req: NextRequest) {
@@ -51,6 +56,7 @@ export async function POST(req: NextRequest) {
   let entriesCreated = 0;
   let ideasImported = 0;
   let duplicatesSkipped = 0;
+  const newEntries: { id: string; title: string }[] = [];
 
   for (const book of books) {
     let entryId = entryByTitle.get(book.title);
@@ -65,6 +71,7 @@ export async function POST(req: NextRequest) {
       entryByTitle.set(book.title, entryId);
       existingTextByEntry.set(entryId, new Set());
       entriesCreated++;
+      newEntries.push({ id: entryId, title: book.title });
     }
     if (!entryId) continue;
 
@@ -83,6 +90,15 @@ export async function POST(req: NextRequest) {
       }
     }
   }
+
+  await Promise.all(
+    newEntries.map(async ({ id, title }) => {
+      const coverUrl = await resolveCoverUrl('', 'Book', title);
+      if (coverUrl) {
+        await supabase.from('entries').update({ cover_url: coverUrl }).eq('id', id);
+      }
+    })
+  );
 
   return NextResponse.json({ entriesCreated, ideasImported, duplicatesSkipped });
 }

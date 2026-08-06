@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 
-type Entry = { id: string; title: string; type: string; created_at: string; tags: string[]; summary: string | null };
+type Entry = { id: string; title: string; type: string; created_at: string; tags: string[]; summary: string | null; cover_url: string | null };
 type Idea = {
   id: string;
   entry_id: string;
@@ -327,7 +327,7 @@ export default function Home() {
     const res = await fetch('/api/ideas', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title: title || 'Untitled', type, ideas: valid, tags, summary }),
+      body: JSON.stringify({ title: title || 'Untitled', type, ideas: valid, tags, summary, content }),
     });
     if (!res.ok) {
       const data = await res.json();
@@ -785,6 +785,7 @@ export default function Home() {
                     ← Back to Library
                   </button>
                   <div className="entry-group">
+                    {activeEntry.cover_url && <img className="file-cover-large" src={activeEntry.cover_url} alt="" />}
                     <div className="entry-head">
                       <div className="entry-meta">
                         {activeEntry.type.toUpperCase()} · {new Date(activeEntry.created_at).toLocaleDateString()}
@@ -938,6 +939,7 @@ export default function Home() {
                       const dueCount = entryIdeas.filter((i) => new Date(i.due_date) <= new Date()).length;
                       return (
                         <div className="file-row" key={entry.id} onClick={() => openEntry(entry.id)}>
+                          {entry.cover_url && <img className="file-cover" src={entry.cover_url} alt="" />}
                           <div className="file-info">
                             <div className="entry-title">{entry.title}</div>
                             <div className="entry-meta">
