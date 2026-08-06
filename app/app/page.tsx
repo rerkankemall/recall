@@ -614,15 +614,10 @@ export default function Home() {
             </div>
           </div>
           <div className="field">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <label>Paste what you read, or tell it in your own words</label>
               {speechSupported && (
-                <button
-                  type="button"
-                  className="btn-ghost"
-                  style={{ padding: '4px 10px', fontSize: 12 }}
-                  onClick={toggleDictation}
-                >
+                <button type="button" className="btn" onClick={toggleDictation}>
                   {listening ? 'Stop' : 'Speak'}
                 </button>
               )}
