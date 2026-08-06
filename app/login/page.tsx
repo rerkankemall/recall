@@ -23,7 +23,12 @@ export default function LoginPage() {
     <div style={{ maxWidth: 380, margin: '80px auto', padding: '0 20px', fontFamily: 'sans-serif' }}>
       <h1 style={{ fontSize: 22, marginBottom: 20 }}>Sign in to Afterword</h1>
       {sent ? (
-        <p>Check your email — we sent a sign-in link to {email}.</p>
+        <>
+          <p>Check your email — we sent a sign-in link to {email}.</p>
+          <p style={{ color: '#888', fontSize: 13, marginTop: 10 }}>
+            Don't see it after a minute or two? Check your spam/junk folder — new senders sometimes land there at first.
+          </p>
+        </>
       ) : (
         <form onSubmit={sendLink}>
           <input
