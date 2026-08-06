@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabaseClient';
 
@@ -46,6 +46,10 @@ export default function Home() {
   const [title, setTitle] = useState('');
   const [type, setType] = useState('Book');
   const [content, setContent] = useState('');
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [listening, setListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+  const contentAtDictationStart = useRef('');
   const [tagsInput, setTagsInput] = useState('');
   const [drafts, setDrafts] = useState<string[]>([]);
   const [status, setStatus] = useState<{ kind: 'idle' | 'loading' | 'error'; msg?: string }>({ kind: 'idle' });
@@ -216,6 +220,55 @@ export default function Home() {
     setTitle(SAMPLE_TITLE);
     setType(SAMPLE_TYPE);
     setContent(SAMPLE_CONTENT);
+  }
+
+  // ---- capture: voice dictation (Web Speech API — Chrome/Edge/Safari only, no Firefox support) ----
+  useEffect(() => {
+    const ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    setSpeechSupported(!!ctor);
+    return () => {
+      recognitionRef.current?.stop();
+    };
+  }, []);
+
+  function toggleDictation() {
+    if (listening) {
+      recognitionRef.current?.stop();
+      return;
+    }
+
+    const ctor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!ctor) return;
+
+    const recognition = new ctor();
+    recognition.lang = navigator.language || 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    contentAtDictationStart.current = content;
+    let finalTranscript = '';
+
+    recognition.onresult = (event: any) => {
+      let interim = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interim += transcript;
+        }
+      }
+      const base = contentAtDictationStart.current;
+      const sep = base && !/[\s\n]$/.test(base) ? ' ' : '';
+      setContent(base + sep + finalTranscript + interim);
+    };
+
+    recognition.onerror = () => setListening(false);
+    recognition.onend = () => setListening(false);
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setListening(true);
   }
 
   async function extractIdeas() {
@@ -561,9 +614,24 @@ export default function Home() {
             </div>
           </div>
           <div className="field">
-            <label>Paste what you read, or tell it in your own words</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+              <label>Paste what you read, or tell it in your own words</label>
+              {speechSupported && (
+                <button
+                  type="button"
+                  className="btn-ghost"
+                  style={{ padding: '4px 10px', fontSize: 12 }}
+                  onClick={toggleDictation}
+                >
+                  {listening ? 'Stop' : 'Speak'}
+                </button>
+              )}
+            </div>
             <textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Paste text, or a YouTube video link…" />
-            <div className="hint">Afterword reads this and pulls out the ideas worth remembering. You can also paste a YouTube video link instead of text.</div>
+            <div className="hint">
+              Afterword reads this and pulls out the ideas worth remembering. You can also paste a YouTube video link instead of text.
+              {listening && ' Listening…'}
+            </div>
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
             <button className="btn" onClick={extractIdeas} disabled={status.kind === 'loading'}>
