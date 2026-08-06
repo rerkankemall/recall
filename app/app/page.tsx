@@ -533,10 +533,10 @@ export default function Home() {
             <div className="onboarding-card">
               <div className="onboarding-title">Welcome to Afterword</div>
               <div className="onboarding-body">
-                Paste something you read below, click "Extract ideas," and Afterword pulls out
-                the key points worth remembering. Save them, and they'll come back to you
-                later in the Review tab on a spaced schedule — so you actually remember them,
-                instead of forgetting like most highlights do.
+                Paste something you read — or a YouTube video link — below, click "Extract ideas,"
+                and Afterword pulls out the key points worth remembering. Save them, and they'll
+                come back to you later in the Review tab on a spaced schedule — so you actually
+                remember them, instead of forgetting like most highlights do.
               </div>
               <button className="btn-ghost" onClick={fillSample}>
                 Try it with a sample
