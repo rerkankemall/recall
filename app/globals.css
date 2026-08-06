@@ -16,6 +16,18 @@ body { margin:0; }
     --line: #2c313b;
     --radius: 3px;
   }
+  :root[data-theme="light"]{
+    --bg: #faf7f1;
+    --surface: #ffffff;
+    --surface-raised: #ffffff;
+    --ink: #2b2620;
+    --ink-dim: #6b6357;
+    --ink-faint: #9b9384;
+    --amber: #c1780f;
+    --amber-dim: #f2ddb0;
+    --rust: #a8443c;
+    --line: #e4ded2;
+  }
   *{ box-sizing:border-box; }
   html{ scroll-behavior:smooth; }
   body{

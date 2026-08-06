@@ -50,6 +50,21 @@ export default function SettingsPage() {
   const [openingPortal, setOpeningPortal] = useState(false);
   const [customFrequency, setCustomFrequency] = useState(false);
   const [origin, setOrigin] = useState('');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    if (localStorage.getItem('afterword-theme') === 'light') setTheme('light');
+  }, []);
+
+  function changeTheme(next: 'dark' | 'light') {
+    setTheme(next);
+    localStorage.setItem('afterword-theme', next);
+    if (next === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  }
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -131,6 +146,14 @@ export default function SettingsPage() {
       </div>
 
       <section className="view active">
+        <div className="field">
+          <label>Appearance</label>
+          <select value={theme} onChange={(e) => changeTheme(e.target.value as 'dark' | 'light')}>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+
         {subscription?.status === 'trialing' && (
           <div className="field">
             <label>Usage</label>

@@ -43,6 +43,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                var t = localStorage.getItem('afterword-theme');
+                if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+              } catch (e) {}
+            `,
+          }}
+        />
         {redditPixelId && (
           <script
             dangerouslySetInnerHTML={{
