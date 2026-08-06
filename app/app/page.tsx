@@ -176,6 +176,7 @@ export default function Home() {
     streak: number;
     reviewedThisWeek: number;
     grid: { date: string; count: number }[];
+    badges: { id: string; label: string; threshold: number; earned: boolean }[];
   } | null>(null);
 
   const loadStats = useCallback(async () => {
@@ -1015,6 +1016,21 @@ export default function Home() {
                       />
                     );
                   })}
+                </div>
+              </div>
+
+              <div className="field" style={{ marginTop: 22 }}>
+                <label>Badges</label>
+                <div className="badge-row">
+                  {stats.badges.map((b) => (
+                    <div
+                      key={b.id}
+                      className={`badge-chip ${b.earned ? 'badge-earned' : 'badge-locked'}`}
+                      title={b.earned ? 'Earned' : `Reach ${b.threshold.toLocaleString()} to unlock`}
+                    >
+                      {b.label}
+                    </div>
+                  ))}
                 </div>
               </div>
             </>

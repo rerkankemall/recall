@@ -42,3 +42,26 @@ export function computeStreakAndWeek(reviewedAts: string[]): {
 
   return { streak, reviewedThisWeek, totalReviews };
 }
+
+// The longest run of consecutive-day reviews ever, not just the current
+// active streak — badges should stay earned permanently even after a streak
+// later breaks, so this is computed separately from computeStreakAndWeek.
+export function computeLongestStreak(reviewedAts: string[]): number {
+  const uniqueDays = Array.from(new Set(reviewedAts.map((r) => dateKey(new Date(r))))).sort();
+  if (uniqueDays.length === 0) return 0;
+
+  let longest = 1;
+  let current = 1;
+  for (let i = 1; i < uniqueDays.length; i++) {
+    const prev = new Date(uniqueDays[i - 1] + 'T00:00:00Z').getTime();
+    const cur = new Date(uniqueDays[i] + 'T00:00:00Z').getTime();
+    const diffDays = Math.round((cur - prev) / (24 * 60 * 60 * 1000));
+    if (diffDays === 1) {
+      current++;
+      longest = Math.max(longest, current);
+    } else {
+      current = 1;
+    }
+  }
+  return longest;
+}

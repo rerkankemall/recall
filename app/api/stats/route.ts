@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabaseServer';
-import { dateKey, computeStreakAndWeek } from '@/lib/reviewStats';
+import { dateKey, computeStreakAndWeek, computeLongestStreak } from '@/lib/reviewStats';
+import { getStreakBadges, getReviewBadges } from '@/lib/badges';
 
 // GET /api/stats -> review streak + activity for the signed-in user
 export async function GET() {
@@ -18,6 +19,8 @@ export async function GET() {
 
   const reviewedAts = (rows || []).map((r) => r.reviewed_at);
   const { streak, reviewedThisWeek, totalReviews } = computeStreakAndWeek(reviewedAts);
+  const longestStreak = computeLongestStreak(reviewedAts);
+  const badges = [...getStreakBadges(longestStreak), ...getReviewBadges(totalReviews)];
 
   const counts = new Map<string, number>();
   reviewedAts.forEach((r) => {
@@ -36,5 +39,5 @@ export async function GET() {
     grid.push({ date: key, count: counts.get(key) || 0 });
   }
 
-  return NextResponse.json({ totalReviews, streak, reviewedThisWeek, grid });
+  return NextResponse.json({ totalReviews, streak, reviewedThisWeek, grid, badges });
 }

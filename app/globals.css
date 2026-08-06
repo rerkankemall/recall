@@ -164,6 +164,14 @@ body { margin:0; }
   .tag-chip.tag-chip-static{ cursor:default; padding:2px 8px; }
   .tag-chip.tag-chip-static:hover{ border-color:var(--line); color:var(--ink-dim); }
 
+  .badge-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .badge-chip{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.02em;
+    border-radius:12px; padding:5px 12px;
+  }
+  .badge-chip.badge-earned{ background:var(--amber); color:var(--bg); font-weight:600; }
+  .badge-chip.badge-locked{ border:1px solid var(--line); color:var(--ink-faint); background:transparent; }
+
   .file-row{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
