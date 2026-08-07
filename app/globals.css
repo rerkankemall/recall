@@ -98,12 +98,12 @@ body { margin:0; }
   }
   .row{ display:flex; gap:12px; }
   .row .field{ flex:1; }
-  input[type=text], textarea, select{
+  input[type=text], input[type=email], textarea, select{
     width:100%; background:var(--surface); border:1px solid var(--line); color:var(--ink);
     padding:11px 12px; border-radius:var(--radius); font-size:14px; font-family:inherit;
     resize:vertical;
   }
-  input[type=text]:focus, textarea:focus, select:focus{ border-color:var(--amber); }
+  input[type=text]:focus, input[type=email]:focus, textarea:focus, select:focus{ border-color:var(--amber); }
   textarea{ min-height:130px; line-height:1.55; }
   select{ appearance:none; background-image:linear-gradient(45deg, transparent 50%, var(--ink-dim) 50%), linear-gradient(135deg, var(--ink-dim) 50%, transparent 50%); background-position: calc(100% - 18px) center, calc(100% - 13px) center; background-size:5px 5px, 5px 5px; background-repeat:no-repeat; }
 

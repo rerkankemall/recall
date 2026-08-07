@@ -20,29 +20,46 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ maxWidth: 380, margin: '80px auto', padding: '0 20px', fontFamily: 'sans-serif' }}>
-      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Sign in to Afterword</h1>
+    <div className="shell" style={{ maxWidth: 420 }}>
+      <div className="brand" style={{ justifyContent: 'center', marginTop: 40, marginBottom: 32 }}>
+        <span className="brand-mark">Afterword</span>
+        <span className="brand-tag">READING MEMORY LOG</span>
+      </div>
+
       {sent ? (
-        <>
-          <p>Check your email — we sent a sign-in link to {email}.</p>
-          <p style={{ color: '#888', fontSize: 13, marginTop: 10 }}>
+        <div className="field">
+          <label>Check your email</label>
+          <div className="hint" style={{ fontSize: 14, color: 'var(--ink)' }}>
+            We sent a sign-in link to {email}. Click it to continue — no password needed.
+          </div>
+          <div className="hint" style={{ marginTop: 10 }}>
             Don't see it after a minute or two? Check your spam/junk folder — new senders sometimes land there at first.
-          </p>
-        </>
+          </div>
+        </div>
       ) : (
         <form onSubmit={sendLink}>
-          <input
-            type="email"
-            required
-            placeholder="you@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={{ width: '100%', padding: 10, marginBottom: 10 }}
-          />
-          <button type="submit" style={{ width: '100%', padding: 10 }}>
-            Send magic link
+          <div className="field">
+            <label>Email</label>
+            <input
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoFocus
+            />
+            <div className="hint">
+              We'll email you a link — no password to create or remember. New here? This starts your free 14-day trial automatically.
+            </div>
+          </div>
+          <button className="btn" type="submit" style={{ width: '100%' }}>
+            Continue
           </button>
-          {error && <p style={{ color: 'crimson', marginTop: 10 }}>{error}</p>}
+          {error && (
+            <div className="hint" style={{ color: 'var(--rust)', marginTop: 10 }}>
+              {error}
+            </div>
+          )}
         </form>
       )}
     </div>
