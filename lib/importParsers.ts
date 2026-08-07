@@ -1,4 +1,30 @@
 export type ParsedBook = { title: string; highlights: string[] };
+export type ParsedBookmark = { title: string; url: string };
+
+function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+// The "Netscape Bookmark File Format" — the standard HTML export format
+// shared by Chrome, Firefox, Edge, and Safari, so this one parser covers
+// bookmark/reading-list exports from any of them.
+export function parseBookmarksHtml(raw: string): ParsedBookmark[] {
+  const bookmarks: ParsedBookmark[] = [];
+  const re = /<A[^>]*\sHREF="([^"]+)"[^>]*>(.*?)<\/A>/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(raw)) !== null) {
+    const url = match[1].trim();
+    if (!/^https?:\/\//i.test(url)) continue; // skip javascript:, place: (Firefox internal), etc.
+    const title = decodeHtmlEntities(match[2].replace(/<[^>]+>/g, '').trim()) || url;
+    bookmarks.push({ title, url });
+  }
+  return bookmarks;
+}
 
 // Kindle's "My Clippings.txt" — entries separated by a line of "=========="
 // Each entry: title line, a "- Your Highlight/Note/Bookmark on ..." meta line,

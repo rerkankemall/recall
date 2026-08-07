@@ -19,6 +19,7 @@ type QuizQuestion = {
   answerIndex: number;
   explanation: string;
 };
+type QueuedLink = { id: string; title: string; url: string; created_at: string };
 
 // Mirrors lib/youtubeTranscript.ts's isYoutubeUrl — kept separate (not
 // imported) because that file pulls in server-only code (next/headers via
@@ -160,6 +161,35 @@ export default function Home() {
   useEffect(() => {
     if (!checkingAuth) loadData();
   }, [checkingAuth, loadData]);
+
+  // ---- queued links (from bookmark imports) ----
+  const [queuedLinks, setQueuedLinks] = useState<QueuedLink[]>([]);
+  const loadQueue = useCallback(async () => {
+    const res = await fetch('/api/queue');
+    if (!res.ok) return;
+    const data = await res.json();
+    setQueuedLinks(data.links || []);
+  }, []);
+
+  useEffect(() => {
+    if (!checkingAuth) loadQueue();
+  }, [checkingAuth, loadQueue]);
+
+  async function startNextQueueItem() {
+    const next = queuedLinks[0];
+    if (!next) return;
+    setTitle(next.title);
+    setType('Article');
+    setContent('');
+    window.open(next.url, '_blank');
+    await fetch(`/api/queue?id=${next.id}`, { method: 'DELETE' });
+    setQueuedLinks((prev) => prev.filter((l) => l.id !== next.id));
+  }
+
+  function skipQueueItem(id: string) {
+    fetch(`/api/queue?id=${id}`, { method: 'DELETE' });
+    setQueuedLinks((prev) => prev.filter((l) => l.id !== id));
+  }
 
   const loadSubscription = useCallback(async () => {
     const res = await fetch('/api/subscription');
@@ -399,7 +429,7 @@ export default function Home() {
   }
 
   // ---- import ----
-  const [importFormat, setImportFormat] = useState<'kindle' | 'readwise'>('kindle');
+  const [importFormat, setImportFormat] = useState<'kindle' | 'readwise' | 'bookmarks'>('kindle');
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importStatus, setImportStatus] = useState<{ kind: 'idle' | 'loading' | 'error' | 'done'; msg?: string }>({
     kind: 'idle',
@@ -413,6 +443,24 @@ export default function Home() {
     setImportStatus({ kind: 'loading' });
     try {
       const content = await importFile.text();
+
+      if (importFormat === 'bookmarks') {
+        const res = await fetch('/api/import-bookmarks', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Import failed');
+        setImportStatus({
+          kind: 'done',
+          msg: `Queued ${data.queued} link${data.queued === 1 ? '' : 's'} for capture${data.duplicatesSkipped > 0 ? ` (skipped ${data.duplicatesSkipped} already queued)` : ''}. Find them at the top of the Capture tab.`,
+        });
+        setImportFile(null);
+        await loadQueue();
+        return;
+      }
+
       const res = await fetch('/api/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -583,6 +631,22 @@ export default function Home() {
 
       {tab === 'capture' && (!subscription || subscription.entitled) && (
         <section className="view active">
+          {queuedLinks.length > 0 && (
+            <div className="trial-banner" style={{ marginTop: 0, marginBottom: 16 }}>
+              <span>
+                {queuedLinks.length} link{queuedLinks.length === 1 ? '' : 's'} queued from your bookmark import
+                {queuedLinks[0] ? ` — next up: "${queuedLinks[0].title}"` : ''}.
+              </span>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn-ghost" onClick={() => skipQueueItem(queuedLinks[0].id)}>
+                  Skip
+                </button>
+                <button className="btn-ghost" onClick={startNextQueueItem}>
+                  Next link →
+                </button>
+              </div>
+            </div>
+          )}
           {dataLoaded && entries.length === 0 && (
             <div className="onboarding-card">
               <div className="onboarding-title">Welcome to Afterword</div>
@@ -1118,25 +1182,25 @@ export default function Home() {
           <div className="row">
             <div className="field">
               <label>Source</label>
-              <select value={importFormat} onChange={(e) => setImportFormat(e.target.value as 'kindle' | 'readwise')}>
+              <select value={importFormat} onChange={(e) => setImportFormat(e.target.value as 'kindle' | 'readwise' | 'bookmarks')}>
                 <option value="kindle">Kindle (My Clippings.txt)</option>
                 <option value="readwise">Readwise (CSV export)</option>
+                <option value="bookmarks">Browser bookmarks (HTML export)</option>
               </select>
             </div>
             <div className="field">
               <label>File</label>
               <input
                 type="file"
-                accept={importFormat === 'kindle' ? '.txt' : '.csv'}
+                accept={importFormat === 'kindle' ? '.txt' : importFormat === 'readwise' ? '.csv' : '.html'}
                 onChange={(e) => setImportFile(e.target.files?.[0] || null)}
               />
             </div>
           </div>
           <div className="hint">
-            {importFormat === 'kindle'
-              ? 'Find "My Clippings.txt" on your Kindle when connected via USB (it\'s in the root "documents" folder).'
-              : 'From Readwise: Settings → Export → Export all highlights as CSV.'}
-            {' '}Each book becomes its own file in your Library, and each highlight becomes a saved idea.
+            {importFormat === 'kindle' && 'Find "My Clippings.txt" on your Kindle when connected via USB (it\'s in the root "documents" folder). Each book becomes its own file in your Library, and each highlight becomes a saved idea.'}
+            {importFormat === 'readwise' && 'From Readwise: Settings → Export → Export all highlights as CSV. Each book becomes its own file in your Library, and each highlight becomes a saved idea.'}
+            {importFormat === 'bookmarks' && 'Export your bookmarks as HTML from your browser (Chrome/Firefox/Edge/Safari all support this from the bookmark manager). Links get queued for you to capture one at a time — see the top of the Capture tab.'}
           </div>
           <button className="btn" style={{ marginTop: 14 }} onClick={runImport} disabled={importStatus.kind === 'loading'}>
             {importStatus.kind === 'loading' ? 'Importing…' : 'Import'}
